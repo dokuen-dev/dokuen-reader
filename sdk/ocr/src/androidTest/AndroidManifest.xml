@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <!-- Mock OCR plugin service for integration testing -->
+        <service
+            android:name="io.github.dokuendev.dokuenreader.ocr.MockOcrPluginService"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="io.github.dokuendev.dokuenreader.ocr.BIND_OCR_SERVICE" />
+            </intent-filter>
+        </service>
+    </application>
+
+</manifest>

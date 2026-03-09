@@ -41,11 +41,11 @@ Download Dokuen Japanese Reader from the [Google Play Store](https://play.google
 
 **Q: Does it work with vertical text (縦書き)?**
 
-* Yes! Dokuen fully supports both horizontal and vertical Japanese text layouts. If you are using the on-device OCR, you must **manually select the text direction** (Horizontal or Vertical) in settings before tapping the Start button, since the on-device engine cannot distinguish between them automatically. **Cloud Scan Mode**, on the other hand, can auto-detect the direction and even supports mixed horizontal and vertical text in the same image.
+* Yes, Dokuen fully supports both horizontal and vertical Japanese text layouts. Depending on the selected Scan Mode, you may need to **manually select the text direction** (Horizontal or Vertical) in settings before tapping the Start button. More advanced OCR engines, such as the built-in **Cloud Scan Mode** and some third-party plugins, can auto-detect the direction and even support mixed horizontal and vertical text in the same image.
 
-**Q: Can I use Google Lens OCR instead?**
+**Q: Can I use [Insert favorite OCR Engine Here] instead?**
 
-* I’ve looked into this extensively, but there is no public API for Google Lens. Other tools that use it essentially have to "trick" Google into thinking a real user is uploading an image via a browser. This requires reverse engineering Google’s internal Protobufs, plus client impersonation (mimicking TLS fingerprints) to bypass bot detection. This violates both the Google Terms of Service and Play Store Developer Policies. Since I want to keep Dokuen on the Play Store, I can’t risk a permanent account ban or app suspension by using unofficial APIs.
+* Yes! Dokuen is built to be extensible, and you can use any OCR engine you want. Check out the [plugins page](PLUGINS.md) for more information.
 
 ## Bug Reports & Feedback
 

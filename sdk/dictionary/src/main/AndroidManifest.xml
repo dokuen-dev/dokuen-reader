@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 
+        This metadata is automatically merged into plugins that depend on this SDK.
+        Plugin authors do not need to manually declare plugin_sdk_version.
+        
+        The ${sdkVersion} placeholder is replaced by Gradle from manifestPlaceholders.
+    -->
+    <application>
+        <meta-data
+            android:name="plugin_sdk_version"
+            android:value="${sdkVersion}" />
+    </application>
+
+</manifest>
