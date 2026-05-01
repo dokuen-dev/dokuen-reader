@@ -18,6 +18,11 @@ The SDK is organized into the following modules:
 - **[sample-plugins/](./sample-plugins/)**: Fully functional, runnable example Android apps
   demonstrating how to implement the APIs.
 
+## Changelog
+
+See the [**Changelog**](./CHANGELOG.md) for a detailed history of changes, including API additions
+and SDK updates across versions.
+
 ## How Plugins Work
 
 Building a plugin for Dokuen is straightforward. You build a standard Android app that exposes a

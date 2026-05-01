@@ -60,7 +60,8 @@ class GcpOcrPluginService : OcrPluginService() {
             description = "GCP API Key with Cloud Vision API enabled",
             type = ConfigFieldType.STRING,
             defaultValue = null,
-            isRequired = true
+            isRequired = true,
+            regexPattern = "^AIza[a-zA-Z0-9_-]{35}$"
         ),
         ConfigField(
             key = ConfigKey.DETECTION_MODE,

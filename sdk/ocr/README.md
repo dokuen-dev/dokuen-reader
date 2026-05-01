@@ -196,6 +196,7 @@ Each `ConfigField` has the following properties:
 | `defaultValue` | String?       | Default value (null if none)                                                                            |
 | `isRequired`   | Bool          | Whether the user must fill in this field                                                                |
 | `enumValues`   | List<String>? | For ENUM type: list of acceptable values shown in dropdown. Required for ENUM, ignored for other types. |
+| `regexPattern` | String?       | For STRING type: optional regex that the user's input must match. Ignored for other types.              |
 
 **Example with ENUM type:**
 
@@ -221,8 +222,34 @@ override val configSchema = listOf(
 )
 ```
 
-The ENUM type displays as a dropdown menu in the Dokuen settings UI, restricting user input to the
-predefined values.
+The ENUM type displays as a dropdown menu in the Dokuen settings UI, restricting user input to the predefined values.
+
+**Examples with `regexPattern` (STRING types only):**
+
+```kotlin
+override val configSchema = listOf(
+    ConfigField(
+        key = "scale_factor",
+        displayName = "Scale Factor",
+        description = "A positive decimal number (e.g., 1.5)",
+        type = ConfigFieldType.STRING,
+        defaultValue = "1.0",
+        isRequired = false,
+        regexPattern = "^[0-9]*\\.?[0-9]+$"
+    ),
+    ConfigField(
+        key = "custom_id",
+        displayName = "Custom ID",
+        description = "Must be 10 to 20 alphanumeric characters",
+        type = ConfigFieldType.STRING,
+        defaultValue = null,
+        isRequired = true,
+        regexPattern = "^[a-zA-Z0-9]{10,20}$"
+    )
+)
+```
+
+For STRING types, the `regexPattern` will enforce constraints (like length, format, or character types) and show an error in the UI if the user's input does not match.
 
 #### `onInitialize(config: Bundle?): InitResult`
 

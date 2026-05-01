@@ -22,7 +22,8 @@ fun ConfigField(
     @ConfigFieldType.Type type: Int,
     defaultValue: String?,
     isRequired: Boolean,
-    enumValues: List<String>? = null
+    enumValues: List<String>? = null,
+    regexPattern: String? = null
 ): ConfigField {
     return ConfigField().apply {
         this.key = key
@@ -32,6 +33,7 @@ fun ConfigField(
         this.defaultValue = defaultValue
         this.isRequired = isRequired
         this.enumValues = enumValues?.toTypedArray()
+        this.regexPattern = regexPattern
     }
 }
 

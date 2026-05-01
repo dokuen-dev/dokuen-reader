@@ -50,4 +50,11 @@ parcelable ConfigField {
      * Must be non-empty when type is ENUM, ignored for other types.
      */
     @nullable String[] enumValues;
+
+    /**
+     * Optional. A regular expression pattern that the string must match.
+     * If null or empty, no regex validation is performed.
+     * Ignored for non-STRING type fields.
+     */
+    @nullable String regexPattern;
 }
