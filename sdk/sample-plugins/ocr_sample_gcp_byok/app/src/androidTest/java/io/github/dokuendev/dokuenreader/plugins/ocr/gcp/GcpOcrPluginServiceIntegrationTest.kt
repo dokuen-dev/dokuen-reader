@@ -97,10 +97,6 @@ class GcpOcrPluginServiceIntegrationTest {
             "Should require internet",
             capabilities.getBoolean(PluginCapabilityKeys.REQUIRES_INTERNET)
         )
-        assertTrue(
-            "Should have custom config",
-            capabilities.getBoolean(PluginCapabilityKeys.HAS_CUSTOM_CONFIG)
-        )
 
         val languages = capabilities.getStringArray(PluginCapabilityKeys.SUPPORTED_LANGUAGES)
         assertNotNull("Supported languages should not be null", languages)

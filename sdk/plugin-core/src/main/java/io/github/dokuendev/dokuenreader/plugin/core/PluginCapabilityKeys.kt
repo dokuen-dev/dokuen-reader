@@ -5,7 +5,10 @@ package io.github.dokuendev.dokuenreader.plugin.core
  * Plugins are free to add custom keys beyond these standard ones.
  */
 object PluginCapabilityKeys {
-    // Common capabilities
+
+    // -------------------------------------------------------------------------
+    // Common capabilities (all plugin types)
+    // -------------------------------------------------------------------------
 
     /**
      * Set this to true or false to report to Dokuen whether this plugin
@@ -17,18 +20,9 @@ object PluginCapabilityKeys {
     const val REQUIRES_INTERNET = "requires_internet"
 
     /**
-     * Set this to true to report to Dokuen that this plugin provides a custom
-     * configuration schema. If true, Dokuen will use the schema returned by
-     * `getConfigSchema()` to dynamically build a settings UI for the plugin,
-     * allowing the user to configure it.
-     *
-     * If false or unset, the settings UI for this plugin will be disabled.
-     */
-    const val HAS_CUSTOM_CONFIG = "has_custom_config"
-
-    /**
-     * A String array of BCP-47 codes of the languages supported by this
-     * plugin. Currently supported languages are "ja" and "zh".
+     * A String array of BCP-47 codes of the source languages supported by this
+     * plugin. Used by **OCR plugins** to declare which scripts they can recognise.
+     * Currently supported values are `"ja"` and `"zh"`.
      *
      * If "ja" is in the array, this plugin will be recognized by and pluggable
      * into Dokuen Japanese Reader. If "zh" is in the array, this plugin will
@@ -38,11 +32,17 @@ object PluginCapabilityKeys {
      * `PluginHostConfigKeys.LANGUAGE` key in the config Bundle passed to its
      * `initialize()` method to know which of the plugin's supported languages
      * to use for the given session.
+     *
+     * **Dictionary plugins** should use [SUPPORTED_SOURCE_LANGUAGES] and
+     * [SUPPORTED_TARGET_LANGUAGES] instead, which separate the language being
+     * looked up from the language definitions are returned in.
      */
     const val SUPPORTED_LANGUAGES = "supported_languages"
 
 
+    // -------------------------------------------------------------------------
     // OCR-specific capabilities
+    // -------------------------------------------------------------------------
 
     /**
      * If true, the "vertical" option in the "Text Direction" settings screen
@@ -73,27 +73,98 @@ object PluginCapabilityKeys {
     const val SUPPORTS_AUTO_TEXT_DIRECTION = "supports_auto_text_direction"
 
 
+    // -------------------------------------------------------------------------
     // Dictionary-specific capabilities
+    // -------------------------------------------------------------------------
 
     /**
-     * If true, Dokuen will pass to the plugin the full sentence and the index
-     * range of the tapped character or characters. The plugin is responsible
-     * for segmenting the sentence and finding the word at the given index.
+     * A String array of BCP-47 codes of the **source** languages this dictionary
+     * plugin can look up. Currently supported values for Dokuen are `"ja"` and
+     * `"zh"`.
      *
-     * If false, Dokuen will segment the sentence and pass the query word to
-     * the plugin. The query word is usually the longest word or compound word
-     * that overlaps with the tapped character or characters.
+     * Dokuen Japanese Reader only surfaces plugins whose array contains `"ja"`.
+     * A plugin that supports multiple source languages (e.g. a machine-translation
+     * fallback covering both Japanese and Chinese) should list all supported codes.
+     *
+     * If more than one language is supported, the plugin must read the
+     * `PluginHostConfigKeys.LANGUAGE` key in the config Bundle passed to its
+     * `initialize()` method to know which of the plugin's supported languages
+     * to use for the given session.
+     */
+    const val SUPPORTED_SOURCE_LANGUAGES = "supported_source_languages"
+
+    /**
+     * A String array of BCP-47 codes of the **target** languages this dictionary
+     * plugin can produce definitions in (e.g. `["en", "es", "fr"]`).
+     *
+     * When this array contains more than one value, Dokuen automatically adds a
+     * target-language selector to the plugin's settings UI. The user's choice is
+     * delivered to the plugin in the `PluginHostConfigKeys.TARGET_LANGUAGE` key
+     * of the config Bundle passed to `initialize()`. When the array contains
+     * exactly one value, no selector is shown but the value is still delivered via
+     * `TARGET_LANGUAGE` for consistency.
+     */
+    const val SUPPORTED_TARGET_LANGUAGES = "supported_target_languages"
+
+    /**
+     * Controls whether Dokuen passes the full OCR block text with cursor indices
+     * to the plugin, or passes only the selected text.
+     *
+     * **`HANDLES_SEGMENTATION = true`**
+     *
+     * The plugin receives `contextText` and `cursorStartIndex`/`cursorEndIndex`
+     * indicating where the user's selection sits within that text. The plugin is
+     * responsible for segmenting the text and finding the word at the cursor, as
+     * well as for deinflection (`REQUIRES_DICTIONARY_FORM` is ignored).
+     *
+     * What `contextText` contains depends on the shape of the user's selection:
+     *
+     * - **Single tap or continuous drag within one OCR block:** `contextText` is the
+     *   full OCR block text. `cursorStartIndex` and `cursorEndIndex` identify the
+     *   selected characters within it. This gives the plugin surrounding context for
+     *   disambiguation. A normal left-to-right drag that sweeps over adjacent words
+     *   qualifies here just as a single tap does.
+     *
+     * - **Disjoint selection or selection spanning multiple OCR blocks:** `contextText`
+     *   is only the concatenated selected text (same as `HANDLES_SEGMENTATION = false`),
+     *   with `cursorStartIndex = 0` and `cursorEndIndex = contextText.length`. Full
+     *   block context cannot be provided because a gap in the selection, or characters
+     *   from different blocks, means there is no single coherent text that honestly
+     *   represents the cursor position.
+     *
+     * In all cases the invariant `contextText.substring(cursorStartIndex, cursorEndIndex)`
+     * yields the primary text of interest.
+     *
+     * `HANDLES_SEGMENTATION = true` is required for translator dictionary plugins.
+     * Translator sources receive `tappedWord` directly and must be capable of handling
+     * raw text without pre-segmentation by the host.
+     *
+     * **`HANDLES_SEGMENTATION = false` (default)**
+     *
+     * Dokuen passes only the selected text as `contextText`, with
+     * `cursorStartIndex = 0` and `cursorEndIndex = contextText.length`. No
+     * segmentation is performed by the host. The text is optionally deinflected
+     * first if `REQUIRES_DICTIONARY_FORM = true`.
      */
     const val HANDLES_SEGMENTATION = "handles_segmentation"
 
     /**
-     * If true, Dokuen will deinflect the query word and send the dictionary
-     * form to the plugin for lookup.
+     * Controls whether Dokuen deinflects the selected word to its dictionary form
+     * before passing it to the plugin.
      *
-     * If false, Dokuen will send the full unmodified word.
+     * This capability has no effect when `HANDLES_SEGMENTATION = true`; in that case
+     * the plugin receives the raw selected text (or full block) and is responsible for
+     * its own deinflection.
      *
-     * This setting has no effect if `HANDLES_SEGMENTATION` is true.
-     * `HANDLES_SEGMENTATION` implies that it also handles deinflection.
+     * **`REQUIRES_DICTIONARY_FORM = true`**
+     *
+     * The host deinflects the selected word using the built-in deinflector and
+     * passes the dictionary form (e.g. "食べる" from "食べて") to the plugin.
+     *
+     * **`REQUIRES_DICTIONARY_FORM = false` (default)**
+     *
+     * The plugin receives the surface form as selected by the user (e.g. "食べて").
+     * The plugin is responsible for any deinflection it needs.
      */
     const val REQUIRES_DICTIONARY_FORM = "requires_dictionary_form"
 }

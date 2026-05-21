@@ -33,7 +33,6 @@ class MlkitOcrPluginService : OcrPluginService() {
         putBoolean(PluginCapabilityKeys.SUPPORTS_AUTO_TEXT_DIRECTION, false)
         putBoolean(PluginCapabilityKeys.REQUIRES_INTERNET, false)
         putStringArray(PluginCapabilityKeys.SUPPORTED_LANGUAGES, arrayOf("ja"))
-        putBoolean(PluginCapabilityKeys.HAS_CUSTOM_CONFIG, true)
     }
 
     override val configSchema = listOf(

@@ -50,7 +50,6 @@ class GcpOcrPluginService : OcrPluginService() {
         putBoolean(PluginCapabilityKeys.SUPPORTS_AUTO_TEXT_DIRECTION, true)
         putBoolean(PluginCapabilityKeys.REQUIRES_INTERNET, true)
         putStringArray(PluginCapabilityKeys.SUPPORTED_LANGUAGES, arrayOf("ja", "zh"))
-        putBoolean(PluginCapabilityKeys.HAS_CUSTOM_CONFIG, true)
     }
 
     override val configSchema = listOf(

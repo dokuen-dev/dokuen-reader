@@ -182,6 +182,9 @@ abstract class OcrPluginService : BasePluginService() {
      * user are delivered to [onInitialize] in the `config` Bundle, keyed by
      * [ConfigField.key].
      *
+     * This property is optional. If your plugin does not require any user configuration,
+     * simply do not override this property (it defaults to an empty list).
+     *
      * User-defined config keys must not start with an underscore (`_`). Keys starting
      * with `_` are reserved for host-provided values (see
      * [PluginHostConfigKeys][io.github.dokuendev.dokuenreader.plugin.core.PluginHostConfigKeys]).
@@ -348,7 +351,11 @@ abstract class OcrPluginService : BasePluginService() {
             serviceScope.launch {
                 try {
                     val result = onInitialize(config)
-                    callback?.onSuccess(result)
+                    if (result.success) {
+                        callback?.onSuccess(result)
+                    } else {
+                        callback?.onFailure(result.errorMessage ?: "Initialization failed")
+                    }
                 } catch (e: Exception) {
                     callback?.onFailure(e.message ?: "Failed to initialize plugin")
                 }

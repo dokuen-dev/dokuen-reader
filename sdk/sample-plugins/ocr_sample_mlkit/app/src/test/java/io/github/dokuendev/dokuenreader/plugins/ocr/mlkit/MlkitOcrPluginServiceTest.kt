@@ -21,7 +21,7 @@ import org.robolectric.annotation.Config
 
 /**
  * Unit tests for MlkitOcrPluginService business logic.
- * 
+ *
  * These tests verify:
  * - Configuration schema
  * - Capabilities reporting
@@ -29,7 +29,7 @@ import org.robolectric.annotation.Config
  * - Shutdown behavior
  * - Error handling
  * - Vertical text conversion logic
- * 
+ *
  * Note: Tests that require actual ML Kit initialization (onInitialize, onProcessImage)
  * are tested in the integration tests. Unit tests focus on the vertical text conversion
  * logic which can be tested independently.
@@ -86,10 +86,6 @@ class MlkitOcrPluginServiceTest {
         assertFalse(
             "Should not require internet",
             capabilities.getBoolean(PluginCapabilityKeys.REQUIRES_INTERNET)
-        )
-        assertTrue(
-            "Should have custom config",
-            capabilities.getBoolean(PluginCapabilityKeys.HAS_CUSTOM_CONFIG)
         )
 
         val languages = capabilities.getStringArray(PluginCapabilityKeys.SUPPORTED_LANGUAGES)

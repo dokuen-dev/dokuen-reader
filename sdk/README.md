@@ -14,7 +14,7 @@ The SDK is organized into the following modules:
 - **[plugin-core](./plugin-core/README.md)** - Shared infrastructure for all plugin types
   (configuration, security, error handling)
 - **[ocr](./ocr/README.md)** - The OCR plugin API
-- **[dictionary](./dictionary/README.md)** - The dictionary plugin API (coming soon)
+- **[dictionary](./dictionary/README.md)** - The dictionary plugin API
 - **[sample-plugins/](./sample-plugins/)**: Fully functional, runnable example Android apps
   demonstrating how to implement the APIs.
 
@@ -32,7 +32,10 @@ specific `Service`.
    filter (e.g., `io.github.dokuendev.dokuenreader.ocr.api.BIND_OCR_PROCESSOR`).
 
 2. **Declare Metadata:** You provide required metadata (Name, Author, Description, License) in your
-   manifest so Dokuen can display it to the user.
+   manifest so Dokuen can display it to the user. Dictionary plugins use intent category tags
+   (`io.github.dokuendev.dokuenreader.category.DICTIONARY` and/or
+   `io.github.dokuendev.dokuenreader.category.TRANSLATOR`)
+   to control where they appear in the settings UI.
 
 3. **Implement Service:** Extend the appropriate Service base class for your plugin type (e.g.,
    `OcrPluginService`) and implement the required methods.

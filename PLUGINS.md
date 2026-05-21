@@ -25,19 +25,22 @@ the [GitHub issue tracker](https://github.com/dokuen-dev/dokuen-reader/issues).
 
 ## OCR Plugins
 
-| Plugin Name                                                  | Description                                       | Author        | License    | Download             | 
-|--------------------------------------------------------------|---------------------------------------------------|---------------|------------|----------------------| 
-| [Google Vision BYOK](sdk/sample-plugins/ocr_sample_gcp_byok) | Google Cloud Vision OCR with 'Bring Your Own Key' | Dokuen Reader | Apache 2.0 | Included in base app | 
+| Plugin Name                                                  | Description                                       | Author        | License    | Download             |
+|--------------------------------------------------------------|---------------------------------------------------|---------------|------------|----------------------|
+| [Google Vision BYOK](sdk/sample-plugins/ocr_sample_gcp_byok) | Google Cloud Vision OCR with 'Bring Your Own Key' | Dokuen Reader | Apache 2.0 | Included in base app |
 | [ML Kit](sdk/sample-plugins/ocr_sample_mlkit)                | Google ML Kit on-device text recognition (sample) | Dokuen Reader | Apache 2.0 | Included in base app |
 
 ## Dictionary Plugins
 
-> Dictionary plugins aren't fully supported yet. The latest beta is focused on ironing out OCR
-> plugins first, then we'll move on to dictionary plugins ASAP after that.
+| Plugin Name                                                        | Description                                                               | Author        | License    | Download             |
+|--------------------------------------------------------------------|---------------------------------------------------------------------------|---------------|------------|----------------------|
+| [AI Dictionary (sample)](sdk/sample-plugins/dictionary_sample_llm) | AI dictionary that generates definitions using Gemini, Claude, or ChatGPT | Dokuen Reader | Apache 2.0 | Included in base app |
 
-| Plugin Name | Description | Author | License | Download | 
-|-------------|-------------|--------|---------|----------| 
-|             |             |        |         |          | 
+## Translator Plugins
+
+| Plugin Name                                                                        | Description                                                     | Author        | License    | Download             |
+|------------------------------------------------------------------------------------|-----------------------------------------------------------------|---------------|------------|----------------------|
+| [Google Translate (sample)](sdk/sample-plugins/dictionary_sample_google_translate) | Sample translator plugin using the Google Cloud Translation API | Dokuen Reader | Apache 2.0 | Included in base app |
 
 ## Build Your Own
 

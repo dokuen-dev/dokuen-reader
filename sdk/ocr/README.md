@@ -172,7 +172,6 @@ to adjust its UI. Use the standard keys from `PluginCapabilityKeys`:
 | `SUPPORTS_AUTO_TEXT_DIRECTION` | Boolean      | Enables "auto" text direction option     |
 | `REQUIRES_INTERNET`            | Boolean      | Whether the plugin needs network access  |
 | `SUPPORTED_LANGUAGES`          | String Array | BCP-47 language codes (e.g., `["ja"]`)   |
-| `HAS_CUSTOM_CONFIG`            | Boolean      | Whether plugin has custom settings       |
 
 You may also add custom keys beyond these standard ones.
 
@@ -181,6 +180,9 @@ You may also add custom keys beyond these standard ones.
 Configuration fields that Dokuen presents to the user in the plugin settings screen.
 The user's entries are delivered to `onInitialize()` in the `config` Bundle, keyed
 by `ConfigField.key`.
+
+This property is optional. If your plugin does not require any user configuration,
+simply do not override this property (it defaults to an empty list).
 
 User-defined config keys **must not** start with an underscore (`_`). Keys beginning
 with `_` are reserved for host-provided values (see below).

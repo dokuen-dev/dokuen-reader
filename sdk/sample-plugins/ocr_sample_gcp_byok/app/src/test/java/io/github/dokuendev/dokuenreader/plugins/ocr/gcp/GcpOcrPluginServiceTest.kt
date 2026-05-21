@@ -22,7 +22,7 @@ import org.robolectric.annotation.Config
 
 /**
  * Unit tests for GcpOcrPluginService business logic.
- * 
+ *
  * These tests verify:
  * - Configuration schema
  * - Capabilities reporting
@@ -93,10 +93,6 @@ class GcpOcrPluginServiceTest {
         assertTrue(
             "Should require internet",
             capabilities.getBoolean(PluginCapabilityKeys.REQUIRES_INTERNET)
-        )
-        assertTrue(
-            "Should have custom config",
-            capabilities.getBoolean(PluginCapabilityKeys.HAS_CUSTOM_CONFIG)
         )
 
         val languages = capabilities.getStringArray(PluginCapabilityKeys.SUPPORTED_LANGUAGES)

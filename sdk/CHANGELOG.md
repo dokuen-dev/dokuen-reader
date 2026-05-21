@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0]
+### Added
+- Initial release of the Dictionary Plugin API (`dictionary`).
+    - Support for styled text, ruby markup, and optional host/plugin split responsibility for segmentation and deinflection.
+- Sample dictionary and translator plugins.
+
+### Removed
+- `PluginCapabilityKeys.HAS_CUSTOM_CONFIG`
+    - Custom config presence is now inferred from whether `getConfigSchema` returns a populated schema or not.
+
 ## [0.2.0]
 ### Added
 - Added `regexPattern` property to `ConfigField` (AIDL and Kotlin builder) to allow regex-based validation of `STRING` type configuration fields.
