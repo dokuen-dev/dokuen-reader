@@ -90,6 +90,28 @@ fun StyledSpan(
     this.style = style
 }
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+/**
+ * Sentinel value for [InlineStyle.listItemOrdinal] that marks a bullet list item.
+ *
+ * When `listItemOrdinal` is set to this value, the item is rendered with a default
+ * bullet marker ("•") unless `listMarkerOverride` is set.
+ *
+ * Note: `listMarkerOverride` only has an effect if `listItemOrdinal` is non-zero (such as [LIST_ITEM_BULLET]).
+ * Setting `listItemOrdinal` to `0` (default) takes precedence and means the span is not a list item,
+ * regardless of whether `listMarkerOverride` is specified.
+ *
+ * ```kotlin
+ * InlineStyle(listItemOrdinal = LIST_ITEM_BULLET)           // "•" marker
+ * InlineStyle(listItemOrdinal = LIST_ITEM_BULLET,
+ *             listMarkerOverride = "→ ")                     // "→ " marker
+ * ```
+ */
+const val LIST_ITEM_BULLET = -1
+
 /**
  * Creates an InlineStyle with the specified properties.
  *
@@ -98,9 +120,14 @@ fun StyledSpan(
  * @param fontSize Relative font size multiplier (1.0 = normal, 0.8 = smaller, 1.2 = larger)
  * @param foregroundColor Foreground color in ARGB format (0 = use default theme color)
  * @param backgroundColor Background color in ARGB format (0 = no background)
- * @param listItemOrdinal List item ordinal (0 = not a list item, >0 = 1-based position)
+ * @param listItemOrdinal List item type and ordinal: 0 = not a list item, >0 = numbered position,
+ *   [LIST_ITEM_BULLET] (-1) = bullet list item.
  * @param listIndentLevel Indent depth for list items (0 = no indent, 1+ = indent level)
- * @param listMarkerOverride Custom list marker override string
+ * @param listMarkerOverride Custom list marker override string (only has an effect if [listItemOrdinal] is non-zero)
+ * @param isBlock Whether this span represents a block container
+ * @param isTable Whether this span represents a table block
+ * @param hoverText If non-null, this span represents clickable pop-up hover text
+ * @param linkUrl If non-null, this span represents a link with the specified URL
  */
 fun InlineStyle(
     bold: Boolean = false,
@@ -110,7 +137,11 @@ fun InlineStyle(
     backgroundColor: Int = 0,
     listItemOrdinal: Int = 0,
     listIndentLevel: Int = 0,
-    listMarkerOverride: String? = null
+    listMarkerOverride: String? = null,
+    isBlock: Boolean = false,
+    isTable: Boolean = false,
+    hoverText: String? = null,
+    linkUrl: String? = null
 ): InlineStyle = InlineStyle().apply {
     this.bold = bold
     this.italic = italic
@@ -120,4 +151,8 @@ fun InlineStyle(
     this.listItemOrdinal = listItemOrdinal
     this.listIndentLevel = listIndentLevel
     this.listMarkerOverride = listMarkerOverride
+    this.isBlock = isBlock
+    this.isTable = isTable
+    this.hoverText = hoverText
+    this.linkUrl = linkUrl
 }

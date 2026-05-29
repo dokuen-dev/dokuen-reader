@@ -49,6 +49,14 @@ class MockOcrPluginService : Service() {
             )
         }
 
+        override fun getConfigActivityName(): String? {
+            return null
+        }
+
+        override fun isConfigured(): Boolean {
+            return true
+        }
+
         override fun initialize(config: Bundle?, callback: IInitCallback?) {
             try {
                 // Simulate initialization

@@ -3,6 +3,7 @@ package io.github.dokuendev.dokuenreader.dictionary
 import android.os.Bundle
 import android.os.IBinder
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.dokuendev.dokuenreader.plugin.core.BasePluginService
 import io.github.dokuendev.dokuenreader.plugin.core.InitResult
 import io.github.dokuendev.dokuenreader.plugin.core.InitResultFactory
 import kotlinx.coroutines.CancellationException
@@ -20,8 +21,29 @@ import java.util.concurrent.TimeUnit
  * Tests error handling for DictionaryException, generic exceptions, cancellation,
  * and security verification integration.
  */
+@Suppress("RedundantVisibilityModifier")
 @RunWith(AndroidJUnit4::class)
 class DictionaryPluginServiceTest {
+
+    private fun <T : DictionaryPluginService> setupPlugin(plugin: T): T {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val method = android.content.ContextWrapper::class.java.getDeclaredMethod(
+            "attachBaseContext",
+            android.content.Context::class.java
+        )
+        method.isAccessible = true
+        method.invoke(plugin, context)
+        return plugin
+    }
+
+    private fun <T : DictionaryPluginService> setupAndRegisterPlugin(plugin: T): T {
+        setupPlugin(plugin)
+        val getBinderMethod = BasePluginService::class.java.getDeclaredMethod("getBinder")
+        getBinderMethod.isAccessible = true
+        val binder = getBinderMethod.invoke(plugin) as IDictionaryService
+        binder.initialize(null, null)
+        return plugin
+    }
 
     /**
      * Test plugin that returns a simple result.
@@ -38,7 +60,7 @@ class DictionaryPluginServiceTest {
                 pronunciation = null,
                 body = StyledText(text = "Definition of $word")
             )
-            return DictionaryResult(listOf(entry))
+            return DictionaryResult(arrayOf(entry))
         }
 
         // Expose getBinder for testing
@@ -117,7 +139,7 @@ class DictionaryPluginServiceTest {
                     "Plugin not initialized"
                 )
             }
-            return DictionaryResult(emptyList())
+            return DictionaryResult(emptyArray())
         }
 
         override fun onShutdown() {
@@ -141,7 +163,58 @@ class DictionaryPluginServiceTest {
             cursorStartIndex: Int,
             cursorEndIndex: Int
         ): DictionaryResult {
-            return DictionaryResult(emptyList())
+            return DictionaryResult(emptyArray())
+        }
+
+        public override fun getBinder(): IBinder = super.getBinder()
+    }
+
+    /**
+     * Test plugin that returns a CustomActionResult.SuccessMessage.
+     */
+    private class CustomActionSuccessPlugin : DictionaryPluginService() {
+        override suspend fun onLookup(
+            contextText: String,
+            cursorStartIndex: Int,
+            cursorEndIndex: Int
+        ): DictionaryResult = DictionaryResult(emptyArray())
+
+        override suspend fun onExecuteCustomAction(actionPayload: String): CustomActionResult {
+            return CustomActionResult.SuccessMessage("Applied: $actionPayload")
+        }
+
+        public override fun getBinder(): IBinder = super.getBinder()
+    }
+
+    /**
+     * Test plugin that returns a CustomActionResult.UpdateResult.
+     */
+    private class CustomActionUpdatePlugin(private val mockResult: DictionaryResult) : DictionaryPluginService() {
+        override suspend fun onLookup(
+            contextText: String,
+            cursorStartIndex: Int,
+            cursorEndIndex: Int
+        ): DictionaryResult = DictionaryResult(emptyArray())
+
+        override suspend fun onExecuteCustomAction(actionPayload: String): CustomActionResult {
+            return CustomActionResult.UpdateResult(mockResult)
+        }
+
+        public override fun getBinder(): IBinder = super.getBinder()
+    }
+
+    /**
+     * Test plugin that throws an exception inside onExecuteCustomAction.
+     */
+    private class CustomActionErrorPlugin : DictionaryPluginService() {
+        override suspend fun onLookup(
+            contextText: String,
+            cursorStartIndex: Int,
+            cursorEndIndex: Int
+        ): DictionaryResult = DictionaryResult(emptyArray())
+
+        override suspend fun onExecuteCustomAction(actionPayload: String): CustomActionResult {
+            throw RuntimeException("Operation failed")
         }
 
         public override fun getBinder(): IBinder = super.getBinder()
@@ -149,7 +222,7 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun simplePlugin_successfulLookup_returnsResult() {
-        val plugin = SimpleTestPlugin()
+        val plugin = setupAndRegisterPlugin(SimpleTestPlugin())
         val latch = CountDownLatch(1)
         var receivedResult: DictionaryResult? = null
 
@@ -179,7 +252,7 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun wordNotFoundPlugin_throwsDictionaryException_invokesOnFailureWithCorrectCode() {
-        val plugin = WordNotFoundPlugin()
+        val plugin = setupAndRegisterPlugin(WordNotFoundPlugin())
         val latch = CountDownLatch(1)
         var receivedErrorCode = -1
         var receivedErrorMessage: String? = null
@@ -210,7 +283,7 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun genericErrorPlugin_throwsException_invokesOnFailureWithInternalError() {
-        val plugin = GenericErrorPlugin()
+        val plugin = setupAndRegisterPlugin(GenericErrorPlugin())
         val latch = CountDownLatch(1)
         var receivedErrorCode = -1
         var receivedErrorMessage: String? = null
@@ -241,7 +314,7 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun cancellablePlugin_throwsCancellationException_invokesOnFailureWithCanceledCode() {
-        val plugin = CancellablePlugin()
+        val plugin = setupAndRegisterPlugin(CancellablePlugin())
         val latch = CountDownLatch(1)
         var receivedErrorCode = -1
         var receivedErrorMessage: String? = null
@@ -267,12 +340,12 @@ class DictionaryPluginServiceTest {
             DictionaryErrorCode.CANCELED,
             receivedErrorCode
         )
-        assertEquals("Error message should match", "Lookup cancelled by user", receivedErrorMessage)
+        assertEquals("Error message should match", "Lookup canceled", receivedErrorMessage)
     }
 
     @Test
     fun initializablePlugin_initializeAndShutdown_lifecycleMethodsCalled() {
-        val plugin = InitializablePlugin()
+        val plugin = setupPlugin(InitializablePlugin())
         val initLatch = CountDownLatch(1)
         var initSuccess = false
 
@@ -301,7 +374,7 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun failedInitPlugin_initializeFails_invokesOnFailure() {
-        val plugin = FailedInitPlugin()
+        val plugin = setupPlugin(FailedInitPlugin())
         val latch = CountDownLatch(1)
         var initFailed = false
         var errorMessage: String? = null
@@ -328,7 +401,7 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun lookup_withNullContextText_invokesOnFailureWithInvalidQuery() {
-        val plugin = SimpleTestPlugin()
+        val plugin = setupAndRegisterPlugin(SimpleTestPlugin())
         val latch = CountDownLatch(1)
         var receivedErrorCode = -1
 
@@ -356,7 +429,7 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun getCapabilities_returnsEmptyBundle() {
-        val plugin = SimpleTestPlugin()
+        val plugin = setupPlugin(SimpleTestPlugin())
         val binder = plugin.getBinder() as IDictionaryService
         val capabilities = binder.capabilities
 
@@ -366,7 +439,7 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun getConfigSchema_returnsEmptySchema() {
-        val plugin = SimpleTestPlugin()
+        val plugin = setupPlugin(SimpleTestPlugin())
         val binder = plugin.getBinder() as IDictionaryService
         val schema = binder.configSchema
 
@@ -376,17 +449,17 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun onLookup_withEmptyResult_returnsEmptyDictionaryResult() {
-        val plugin = object : DictionaryPluginService() {
+        val plugin = setupAndRegisterPlugin(object : DictionaryPluginService() {
             override suspend fun onLookup(
                 contextText: String,
                 cursorStartIndex: Int,
                 cursorEndIndex: Int
             ): DictionaryResult {
-                return DictionaryResult(emptyList())
+                return DictionaryResult(emptyArray())
             }
 
             public override fun getBinder() = super.getBinder()
-        }
+        })
 
         val latch = CountDownLatch(1)
         var receivedResult: DictionaryResult? = null
@@ -412,13 +485,13 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun onLookup_withMultipleEntries_returnsAllEntries() {
-        val plugin = object : DictionaryPluginService() {
+        val plugin = setupAndRegisterPlugin(object : DictionaryPluginService() {
             override suspend fun onLookup(
                 contextText: String,
                 cursorStartIndex: Int,
                 cursorEndIndex: Int
             ): DictionaryResult {
-                val entries = listOf(
+                val entries = arrayOf(
                     DictionaryEntry(
                         headword = "橋",
                         pronunciation = null,
@@ -434,7 +507,7 @@ class DictionaryPluginServiceTest {
             }
 
             public override fun getBinder() = super.getBinder()
-        }
+        })
 
         val latch = CountDownLatch(1)
         var receivedResult: DictionaryResult? = null
@@ -458,5 +531,93 @@ class DictionaryPluginServiceTest {
         assertEquals("Result should have two entries", 2, receivedResult!!.entries.size)
         assertEquals("First entry headword", "橋", receivedResult!!.entries[0].headword)
         assertEquals("Second entry headword", "箸", receivedResult!!.entries[1].headword)
+    }
+
+    @Test
+    fun executeCustomAction_successMessage_callsOnSuccessMessage() {
+        val plugin = setupAndRegisterPlugin(CustomActionSuccessPlugin())
+        val latch = CountDownLatch(1)
+        var receivedMessage: String? = null
+
+        val callback = object : ICustomActionCallback.Stub() {
+            override fun onSuccessMessage(message: String?) {
+                receivedMessage = message
+                latch.countDown()
+            }
+
+            override fun onUpdateResult(result: DictionaryResult?) {
+                latch.countDown()
+            }
+
+            override fun onFailure(errorMessage: String?) {
+                latch.countDown()
+            }
+        }
+
+        val binder = plugin.getBinder() as IDictionaryService
+        binder.executeCustomAction("my_payload", callback)
+
+        assertTrue("Callback should be invoked", latch.await(5, TimeUnit.SECONDS))
+        assertEquals("Applied: my_payload", receivedMessage)
+    }
+
+    @Test
+    fun executeCustomAction_updateResult_callsOnUpdateResult() {
+        val entry = DictionaryEntry("test", null, StyledText("test_body"))
+        val mockResult = DictionaryResult(arrayOf(entry))
+        val plugin = setupAndRegisterPlugin(CustomActionUpdatePlugin(mockResult))
+        val latch = CountDownLatch(1)
+        var receivedResult: DictionaryResult? = null
+
+        val callback = object : ICustomActionCallback.Stub() {
+            override fun onSuccessMessage(message: String?) {
+                latch.countDown()
+            }
+
+            override fun onUpdateResult(result: DictionaryResult?) {
+                receivedResult = result
+                latch.countDown()
+            }
+
+            override fun onFailure(errorMessage: String?) {
+                latch.countDown()
+            }
+        }
+
+        val binder = plugin.getBinder() as IDictionaryService
+        binder.executeCustomAction("my_payload", callback)
+
+        assertTrue("Callback should be invoked", latch.await(5, TimeUnit.SECONDS))
+        assertNotNull(receivedResult)
+        assertEquals(1, receivedResult!!.entries.size)
+        assertEquals("test", receivedResult!!.entries[0].headword)
+    }
+
+    @Test
+    fun executeCustomAction_throwsException_callsOnFailure() {
+        val plugin = setupAndRegisterPlugin(CustomActionErrorPlugin())
+        val latch = CountDownLatch(1)
+        var receivedError: String? = null
+
+        val callback = object : ICustomActionCallback.Stub() {
+            override fun onSuccessMessage(message: String?) {
+                latch.countDown()
+            }
+
+            override fun onUpdateResult(result: DictionaryResult?) {
+                latch.countDown()
+            }
+
+            override fun onFailure(errorMessage: String?) {
+                receivedError = errorMessage
+                latch.countDown()
+            }
+        }
+
+        val binder = plugin.getBinder() as IDictionaryService
+        binder.executeCustomAction("my_payload", callback)
+
+        assertTrue("Callback should be invoked", latch.await(5, TimeUnit.SECONDS))
+        assertEquals("Operation failed", receivedError)
     }
 }

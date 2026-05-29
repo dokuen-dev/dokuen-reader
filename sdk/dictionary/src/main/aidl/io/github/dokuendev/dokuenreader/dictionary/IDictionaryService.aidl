@@ -2,6 +2,7 @@ package io.github.dokuendev.dokuenreader.dictionary;
 
 import android.os.Bundle;
 import io.github.dokuendev.dokuenreader.dictionary.IDictionaryCallback;
+import io.github.dokuendev.dokuenreader.dictionary.ICustomActionCallback;
 import io.github.dokuendev.dokuenreader.plugin.core.PluginConfigSchema;
 import io.github.dokuendev.dokuenreader.plugin.core.IInitCallback;
 
@@ -47,6 +48,38 @@ interface IDictionaryService {
      */
     PluginConfigSchema getConfigSchema();
 
+    /**
+     * Returns the class name of an Activity in this plugin's APK that the
+     * host should launch for configuration, or null if the plugin uses the
+     * host-built config UI (configSchema).
+     *
+     * When non-null, the host ignores configSchema for UI-building purposes
+     * and instead launches this Activity when the user taps "Configure".
+     *
+     * Use a leading dot (e.g. ".MyConfigActivity") for a class relative to
+     * the plugin's package, or a full class name.
+     *
+     * @return Relative or fully-qualified class name, or null.
+     */
+    @nullable String getConfigActivityName();
+
+    /**
+     * Returns whether the plugin considers itself fully configured and ready
+     * to be activated.
+     *
+     * This method is only meaningful for plugins that declare a config
+     * Activity via getConfigActivityName(). Such plugins manage their own
+     * configuration storage, so the host cannot determine readiness from the
+     * configSchema alone.
+     *
+     * For schema-based plugins (getConfigActivityName() returns null), the
+     * host uses the configSchema isRequired flags to determine readiness and
+     * ignores this method.
+     *
+     * @return true if the plugin is ready to be activated, false otherwise.
+     */
+    boolean isConfigured();
+
     // --- Initialization Phase (Reading Session Start) ---
 
     /**
@@ -89,6 +122,14 @@ interface IDictionaryService {
      */
     oneway void lookup(String contextText, int cursorStartIndex, int cursorEndIndex,
                        IDictionaryCallback callback);
+
+    /**
+     * Execute a custom action on the dictionary plugin.
+     * 
+     * @param actionPayload Custom action payload string (e.g. action payload/params)
+     * @param callback Callback to receive the action execution results
+     */
+    oneway void executeCustomAction(String actionPayload, ICustomActionCallback callback);
 
     // --- Cleanup Phase (Reading Session End) ---
 

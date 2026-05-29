@@ -423,6 +423,52 @@ override val configSchema = listOf(
 )
 ```
 
+#### Plugin-Hosted Configuration UI (`configActivityName` & `isConfigured`)
+
+By default, Dokuen builds a configuration UI automatically from your `configSchema`. However, if
+your plugin needs a complex configuration flow (e.g., custom OAuth flows, custom UI components, or
+reading a configuration file from local storage), your plugin can host its own configuration UI.
+
+To use a plugin-hosted configuration UI, you must:
+
+1. **Specify your configuration Activity** by overriding `configActivityName`:
+   ```kotlin
+   override val configActivityName = ".MyConfigActivity"
+   ```
+   *Use a leading dot (e.g. `".MyConfigActivity"`) for a class relative to your plugin's package, or
+   a fully-qualified class name.*
+
+   When `configActivityName` is non-null, Dokuen ignores `configSchema` for UI-building and will
+   instead launch your Activity when the user taps "Configure".
+
+2. **Declare the Activity in your plugin's `AndroidManifest.xml`**:
+   ```xml
+   <activity
+       android:name=".MyConfigActivity"
+       android:exported="true"
+       android:theme="@style/Theme.Material3.DayNight">
+       <!-- Ensure the activity is launchable by the host app -->
+   </activity>
+   ```
+
+3. **Report configuration readiness** by overriding `isConfigured()`:
+   ```kotlin
+   override fun isConfigured(): Boolean {
+       // Perform your validation here (e.g., checking if SharedPreferences contain valid credentials)
+       return checkCredentialsValid()
+   }
+   ```
+   *Since your plugin manages its own configuration storage (e.g., using its own `SharedPreferences`
+   or database), the host cannot verify configuration completeness automatically. Thus, you **must**
+   override `isConfigured()` to report whether your plugin is ready to be activated. The default
+   implementation returns `true`.*
+
+> [!IMPORTANT]
+> **Mutual Exclusivity:** The plugin-hosted configuration flow (`configActivityName` +
+`isConfigured()`) and the schema-based configuration flow (`configSchema`) are mutually exclusive.
+> If you specify a non-null `configActivityName`, Dokuen will ignore the `configSchema` entirely for
+> UI building, and you must manage configuration storage and readiness check yourself.
+
 ---
 
 #### `onInitialize(config: Bundle?): InitResult`
@@ -627,16 +673,20 @@ with an `InlineStyle`.
 
 **InlineStyle Fields:**
 
-| Field                | Type      | Description                                                                        |
-|----------------------|-----------|------------------------------------------------------------------------------------|
-| `bold`               | `Boolean` | Bold text.                                                                         |
-| `italic`             | `Boolean` | Italic text.                                                                       |
-| `fontSize`           | `Float`   | Relative size multiplier (1.0 = normal, 0.9 = smaller, 1.2 = larger).              |
-| `foregroundColor`    | `Int`     | ARGB color. `0` = use default text color (theme-appropriate).                      |
-| `backgroundColor`    | `Int`     | ARGB color. `0` = no background.                                                   |
-| `listItemOrdinal`    | `Int`     | `0` = not a list item. Positive = 1-based ordinal (e.g., 1 → "1.", 2 → "2.").      |
-| `listIndentLevel`    | `Int`     | Indent depth; each level adds 16dp. Default 1 for list items.                      |
-| `listMarkerOverride` | `String?` | Custom marker string (e.g. `"• "`, `"① "`, `"α. "`). Overrides ordinal formatting. |
+| Field                | Type      | Description                                                                                        |
+|----------------------|-----------|----------------------------------------------------------------------------------------------------|
+| `bold`               | `Boolean` | Bold text.                                                                                         |
+| `italic`             | `Boolean` | Italic text.                                                                                       |
+| `fontSize`           | `Float`   | Relative size multiplier (1.0 = normal, 0.9 = smaller, 1.2 = larger).                              |
+| `foregroundColor`    | `Int`     | ARGB color. `0` = use default text color (theme-appropriate).                                      |
+| `backgroundColor`    | `Int`     | ARGB color. `0` = no background.                                                                   |
+| `listItemOrdinal`    | `Int`     | `0` = not a list item. `>0` = numbered (e.g., 1 → "1."). `-1` (`LIST_ITEM_BULLET`) = bullet ("•"). |
+| `listIndentLevel`    | `Int`     | Indent depth; each level adds 16dp. Default 1 for list items.                                      |
+| `listMarkerOverride` | `String?` | Custom marker string (e.g. `"① "`, `"α. "`). Only has effect if `listItemOrdinal != 0`.            |
+| `isBlock`            | `Boolean` | Whether this span represents an explicit block container.                                          |
+| `isTable`            | `Boolean` | Whether this span represents an aligned grid table block (flat pipe grid layout).                  |
+| `hoverText`          | `String?` | Clicking this text range opens a pop-up displaying this additional text.                           |
+| `linkUrl`            | `String?` | Target URL/URI string to make the text range an underlined, styled hyperlink.                      |
 
 **Span Overlap Behavior:**
 
@@ -668,13 +718,202 @@ To create numbered lists, set `listItemOrdinal` to a positive integer. Dokuen wi
 render the item with a prefix like "1.", "2.", etc., and apply indentation based on
 `listIndentLevel`.
 
-For custom markers (bullets, roman numerals, etc.), use `listMarkerOverride`:
+To create bullet lists, set `listItemOrdinal` to `LIST_ITEM_BULLET` (-1). Dokuen will
+render the item with a default "•" marker:
+
+```kotlin
+import io.github.dokuendev.dokuenreader.dictionary.LIST_ITEM_BULLET
+
+StyledSpan(0, 10, InlineStyle(
+    listItemOrdinal = LIST_ITEM_BULLET,
+    listIndentLevel = 1
+))
+```
+
+For custom markers (roman numerals, circled numbers, etc.), use `listMarkerOverride`
+on either numbered or bullet items.
+
+> [!NOTE]
+> `listMarkerOverride` is ignored if `listItemOrdinal` is 0 (i.e., the span is not a list item).
 
 ```kotlin
 StyledSpan(0, 10, InlineStyle(
-    listMarkerOverride = "• ",
+    listItemOrdinal = LIST_ITEM_BULLET,
+    listMarkerOverride = "→ ",
     listIndentLevel = 1
 ))
+```
+
+**Blocks (`isBlock = true`):**
+
+To support standalone block containers (such as example boxes, cross-reference boxes, or card-like
+layouts), you can use the `isBlock` property.
+When `isBlock` is set to `true` on an `InlineStyle`, the host application renders the styled
+character range as a standalone block container separated from surrounding content.
+
+* **Indentation**: Blocks can be indented relative to their surrounding layout by setting
+  `listIndentLevel`.
+* **Sizing**: Blocks automatically grow to fit their content vertically and occupy the available
+  parent width.
+
+*Example Block:*
+
+```kotlin
+val blockSpan = StyledSpan(
+    startIndex = 0,
+    endIndex = blockText.length,
+    style = InlineStyle(
+        isBlock = true,
+        listIndentLevel = 1
+    )
+)
+```
+
+**Tables (`isTable = true`):**
+
+To support grid layouts, you can declare structured table blocks.
+When `isTable` is set to `true` on an `InlineStyle`, the host application interprets the text
+content of the span as a flat table grid using a markdown-like **pipe character (`|`)** layout.
+
+* **Row Structure**: Each line in the table text represents a row.
+* **Cell Bounds**: Rows must start with `| ` and end with ` |`. Cells are separated by ` | `.
+* **Explicit Cell Styling**: The host application does not automatically infer headers or highlight
+  specific rows differently. You control formatting (like bold headers, cell backgrounds, or colored
+  text) by explicitly setting nested `StyledSpan`s for individual cell contents.
+* **Indentation**: Tables can be cleanly aligned/indented like list items by setting
+  `listIndentLevel` on the table's `InlineStyle`.
+* **Formatting inside cells**: Text, child styled spans, and ruby annotations inside cells are fully
+  supported. They will be correctly preserved, styled, and positioned within their respective grid
+  cells relative to cell boundaries.
+* **Line breaks within cells**: You can introduce line breaks/newlines within a table cell using
+  HTML-style `<br>` or `<br/>` tags (case-insensitive).
+
+*Example Table:*
+
+```kotlin
+val tableText = """
+| Expression | Reading | Meaning |
+| 食べる | たべる | to eat |
+| 食らう | くらう | to devour |
+""".trimIndent()
+
+val tableSpan = StyledSpan(
+    startIndex = 0,
+    endIndex = tableText.length,
+    style = InlineStyle(
+        isTable = true,
+        listIndentLevel = 1
+    )
+)
+```
+
+**Hover Text (`hoverText`):**
+
+Clickable ranges of text can be created to show additional descriptive text in a pop-up when clicked
+by the user.
+When `hoverText` is set to a non-null string on an `InlineStyle`, the host application registers a
+click handler on that character range. When clicked, it displays the specified string in a mini
+hover-text overlay.
+
+*Example Hover Text:*
+
+```kotlin
+val definitionText = "Contains sodium chloride"
+val hoverSpan = StyledSpan(
+    startIndex = 9,
+    endIndex = 24,
+    style = InlineStyle(
+        hoverText = "Common salt (NaCl)"
+    )
+)
+```
+
+**Links (`linkUrl`):**
+
+Hyperlinks can be added to text ranges to support external references, internal dictionary
+cross-linking (such as "See also" references), or custom interactive operations (like mutating
+dictionary state or making custom RPC calls).
+When `linkUrl` is set to a non-null string on an `InlineStyle`, the host application automatically:
+
+1. Styles the text range with a contrasting **blue/cyan** link accent color.
+2. Applies a visual **underline** (`TextDecoration.Underline`) to denote interactiveness.
+
+**Supported Link Schemes:**
+
+1. **External Web Links**: Use standard URL schemes starting with `http://` or `https://` (e.g.,
+   `https://example.com/definition`). These must be properly URL-encoded. When clicked, they are
+   opened in the system browser using Android's default URI handler.
+2. **Dictionary Lookups (`lookup:`)**: Prefix the target word with `lookup:` (e.g.,
+   `lookup:食べる`). The host application extracts the target word and calls the plugin's `onLookup`
+   method with that target as the query string. The target string is delivered verbatim to the
+   plugin without segmentation or deinflection. Unlike with external URLs, the target string need
+   not be URL-encoded. (You may choose to URL-encode it, but if you do, it will not be automatically
+   decoded by the host and will be passed back as-is, encoding and all.)
+3. **Custom Actions (`action:`)**: Prefix your custom payload with `action:` (e.g.,
+   `action:toggle_favorite?id=123`). The host application strips the prefix and passes the remaining
+   payload string directly to the plugin's `onExecuteCustomAction` method. Unlike with external
+   URLs, the target string need not be URL-encoded. (You may choose to URL-encode it, but if you do,
+   it will not be automatically decoded by the host and will be passed back as-is, encoding and
+   all.)
+
+**Implementing Custom Actions:**
+
+To support custom action links (`action:`), override the optional `onExecuteCustomAction` method in
+your `DictionaryPluginService` subclass. Return a **`CustomActionResult`** on success, or throw an
+exception on failure:
+
+* **`CustomActionResult.SuccessMessage(message)`**: Displays a success status message in the host's
+  dictionary window UI.
+* **`CustomActionResult.UpdateResult(result)`**: Dynamically updates the displayed dictionary
+  entries with new result data (e.g., to modify content after toggling a state).
+* **Throwing an exception**: Automatically maps to a failure state in the host UI, displaying your
+  exception message.
+
+*Custom Action Service Example:*
+
+```kotlin
+class MyDictionaryPlugin : DictionaryPluginService() {
+
+    override suspend fun onExecuteCustomAction(actionPayload: String): CustomActionResult {
+        if (actionPayload.startsWith("favorite?word=")) {
+            val word = actionPayload.removePrefix("favorite?word=")
+            // Toggle word favorite in your database/state
+            myDb.toggleFavorite(word)
+            
+            // Fetch updated definitions to dynamically update the host popup
+            val updatedResult = onLookup(word, 0, word.length)
+            return CustomActionResult.UpdateResult(updatedResult)
+        } else {
+            throw IllegalArgumentException("Unknown custom action: $actionPayload")
+        }
+    }
+}
+```
+
+*Example Links in StyledText:*
+
+```kotlin
+val linkText = "See also 食べる or Action Toggle"
+val spans = listOf(
+    // 1. External Link
+    StyledSpan(
+        startIndex = 0,
+        endIndex = 8,
+        style = InlineStyle(linkUrl = "https://en.wikipedia.org/wiki/Taberu")
+    ),
+    // 2. Internal Lookup Link
+    StyledSpan(
+        startIndex = 9,
+        endIndex = 12,
+        style = InlineStyle(linkUrl = "lookup:食べる")
+    ),
+    // 3. Custom Action Link
+    StyledSpan(
+        startIndex = 16,
+        endIndex = 29,
+        style = InlineStyle(linkUrl = "action:favorite?word=食べる")
+    )
+)
 ```
 
 **Color Accessibility:**

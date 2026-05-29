@@ -164,6 +164,48 @@ abstract class DictionaryPluginService : BasePluginService() {
     open val configSchema: List<ConfigField> = emptyList()
 
     /**
+     * The class name of an Activity in this plugin's APK that the host
+     * should launch for configuration.
+     *
+     * When set, the host ignores [configSchema] for UI building and instead
+     * opens this Activity when the user taps "Configure". The Activity runs
+     * in the plugin's own process and has full access to the plugin's storage
+     * and UI toolkit.
+     *
+     * Use a leading dot (e.g. `".MyConfigActivity"`) for a class relative to
+     * the plugin's package, or a full class name (e.g.
+     * `"com.example.plugin.MyConfigActivity"`).
+     *
+     * **Coupled with [isConfigured]:** Plugins that set this property **must**
+     * also override [isConfigured] to report whether the plugin has been
+     * fully configured. The host cannot determine readiness from
+     * [configSchema] for plugins that manage their own configuration.
+     *
+     * Defaults to `null`, meaning the host builds the config UI from
+     * [configSchema].
+     */
+    open val configActivityName: String? = null
+
+    /**
+     * Reports whether this plugin considers itself fully configured and
+     * ready to be activated.
+     *
+     * **This method is only meaningful when [configActivityName] is set.**
+     * Plugins that host their own config Activity manage their own
+     * configuration storage, so the host relies on this method to determine
+     * whether the plugin may be selected as active.
+     *
+     * For schema-based plugins ([configActivityName] is null), the host
+     * uses the [configSchema] `isRequired` flags instead and ignores this
+     * method.
+     *
+     * The default implementation returns `true`. Override this when using
+     * [configActivityName] to perform your own validation (e.g., checking
+     * that an API key file exists on disk).
+     */
+    open fun isConfigured(): Boolean = true
+
+    /**
      * A [Bundle] of key-value pairs describing this plugin's capabilities.
      *
      * Override this property to report what your plugin supports. Dokuen reads these
@@ -312,6 +354,22 @@ abstract class DictionaryPluginService : BasePluginService() {
      */
     open fun onShutdown() {}
 
+    /**
+     * Execute a custom action requested by the host application.
+     *
+     * Override this method to perform plugin-specific actions when a user clicks a custom action
+     * link (action:{payload}). Return a [CustomActionResult] on success, or throw an exception on failure.
+     * 
+     * Implementations of this method are completely optional, but expected to be implemented
+     * if the plugin uses `action:` links.
+     */
+    open suspend fun onExecuteCustomAction(actionPayload: String): CustomActionResult {
+        throw DictionaryException(
+            DictionaryErrorCode.INTERNAL_ERROR,
+            "Custom actions not supported by this plugin"
+        )
+    }
+
     // =========================================================================
     // Internal: AIDL bridge -- plugin authors do not interact with anything below.
     // =========================================================================
@@ -321,6 +379,14 @@ abstract class DictionaryPluginService : BasePluginService() {
 
         override fun getConfigSchema(): PluginConfigSchema {
             return PluginConfigSchema(this@DictionaryPluginService.configSchema)
+        }
+
+        override fun getConfigActivityName(): String? {
+            return this@DictionaryPluginService.configActivityName
+        }
+
+        override fun isConfigured(): Boolean {
+            return this@DictionaryPluginService.isConfigured()
         }
 
         override fun initialize(config: Bundle?, callback: IInitCallback?) {
@@ -368,6 +434,44 @@ abstract class DictionaryPluginService : BasePluginService() {
                     callback?.onFailure(e.errorCode, e.message ?: "Lookup failed")
                 } catch (e: Exception) {
                     callback?.onFailure(DictionaryErrorCode.INTERNAL_ERROR, e.message ?: "Unknown error")
+                }
+            }
+        }
+
+        override fun executeCustomAction(actionPayload: String?, callback: ICustomActionCallback?) {
+            if (!isCallingAppRegistered()) {
+                try {
+                    callback?.onFailure("Calling app not verified")
+                } catch (_: Exception) {
+                }
+                return
+            }
+
+            if (actionPayload == null || callback == null) {
+                try {
+                    callback?.onFailure("Missing required parameters")
+                } catch (_: Exception) {
+                }
+                return
+            }
+
+            serviceScope.launch {
+                try {
+                    val result = onExecuteCustomAction(actionPayload)
+                    when (result) {
+                        is CustomActionResult.SuccessMessage -> callback.onSuccessMessage(result.message)
+                        is CustomActionResult.UpdateResult -> callback.onUpdateResult(result.result)
+                    }
+                } catch (e: DictionaryException) {
+                    try {
+                        callback.onFailure(e.message ?: "Unknown error")
+                    } catch (_: Exception) {
+                    }
+                } catch (e: Exception) {
+                    try {
+                        callback.onFailure(e.message ?: "Unknown error")
+                    } catch (_: Exception) {
+                    }
                 }
             }
         }

@@ -224,7 +224,8 @@ override val configSchema = listOf(
 )
 ```
 
-The ENUM type displays as a dropdown menu in the Dokuen settings UI, restricting user input to the predefined values.
+The ENUM type displays as a dropdown menu in the Dokuen settings UI, restricting user input to the
+predefined values.
 
 **Examples with `regexPattern` (STRING types only):**
 
@@ -251,7 +252,54 @@ override val configSchema = listOf(
 )
 ```
 
-For STRING types, the `regexPattern` will enforce constraints (like length, format, or character types) and show an error in the UI if the user's input does not match.
+For STRING types, the `regexPattern` will enforce constraints (like length, format, or character
+types) and show an error in the UI if the user's input does not match.
+
+#### Plugin-Hosted Configuration UI (`configActivityName` & `isConfigured`)
+
+By default, Dokuen builds a configuration UI automatically from your `configSchema`. However, if
+your plugin needs a complex configuration flow (e.g., custom OAuth flows, custom UI components, or
+reading a configuration file from local storage), your plugin can host its own configuration UI.
+
+To use a plugin-hosted configuration UI, you must:
+
+1. **Specify your configuration Activity** by overriding `configActivityName`:
+   ```kotlin
+   override val configActivityName = ".MyConfigActivity"
+   ```
+   *Use a leading dot (e.g. `".MyConfigActivity"`) for a class relative to your plugin's package, or
+   a fully-qualified class name.*
+
+   When `configActivityName` is non-null, Dokuen ignores `configSchema` for UI-building and will
+   instead launch your Activity when the user taps "Configure".
+
+2. **Declare the Activity in your plugin's `AndroidManifest.xml`**:
+   ```xml
+   <activity
+       android:name=".MyConfigActivity"
+       android:exported="true"
+       android:theme="@style/Theme.Material3.DayNight">
+       <!-- Ensure the activity is launchable by the host app -->
+   </activity>
+   ```
+
+3. **Report configuration readiness** by overriding `isConfigured()`:
+   ```kotlin
+   override fun isConfigured(): Boolean {
+       // Perform your validation here (e.g., checking if SharedPreferences contain valid credentials)
+       return checkCredentialsValid()
+   }
+   ```
+   *Since your plugin manages its own configuration storage (e.g., using its own `SharedPreferences`
+   or database), the host cannot verify configuration completeness automatically. Thus, you **must**
+   override `isConfigured()` to report whether your plugin is ready to be activated. The default
+   implementation returns `true`.*
+
+> [!IMPORTANT]
+> **Mutual Exclusivity:** The plugin-hosted configuration flow (`configActivityName` +
+`isConfigured()`) and the schema-based configuration flow (`configSchema`) are mutually exclusive.
+> If you specify a non-null `configActivityName`, Dokuen will ignore the `configSchema` entirely for
+> UI building, and you must manage configuration storage and readiness check yourself.
 
 #### `onInitialize(config: Bundle?): InitResult`
 

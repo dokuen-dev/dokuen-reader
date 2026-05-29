@@ -36,6 +36,10 @@ class InlineStyleParcelableTest {
             assertEquals(0, unparceled.listItemOrdinal)
             assertEquals(0, unparceled.listIndentLevel)
             assertNull(unparceled.listMarkerOverride)
+            assertFalse(unparceled.isBlock)
+            assertFalse(unparceled.isTable)
+            assertNull(unparceled.hoverText)
+            assertNull(unparceled.linkUrl)
         } finally {
             parcel.recycle()
         }
@@ -309,6 +313,10 @@ class InlineStyleParcelableTest {
             listItemOrdinal = 5
             listIndentLevel = 3
             listMarkerOverride = "→ "
+            isBlock = true
+            isTable = true
+            hoverText = "Pop-up description text"
+            linkUrl = "https://example.com"
         }
 
         val parcel = Parcel.obtain()
@@ -326,6 +334,32 @@ class InlineStyleParcelableTest {
             assertEquals(5, unparceled.listItemOrdinal)
             assertEquals(3, unparceled.listIndentLevel)
             assertEquals("→ ", unparceled.listMarkerOverride)
+            assertTrue(unparceled.isBlock)
+            assertTrue(unparceled.isTable)
+            assertEquals("Pop-up description text", unparceled.hoverText)
+            assertEquals("https://example.com", unparceled.linkUrl)
+        } finally {
+            parcel.recycle()
+        }
+    }
+
+    @Test
+    fun inlineStyle_bulletListSentinel_canBeParceled() {
+        val original = InlineStyle().apply {
+            listItemOrdinal = -1 // LIST_ITEM_BULLET
+            listIndentLevel = 1
+        }
+
+        val parcel = Parcel.obtain()
+        try {
+            original.writeToParcel(parcel, 0)
+            parcel.setDataPosition(0)
+
+            val unparceled = InlineStyle.CREATOR.createFromParcel(parcel)
+
+            assertEquals(-1, unparceled.listItemOrdinal)
+            assertEquals(1, unparceled.listIndentLevel)
+            assertNull(unparceled.listMarkerOverride)
         } finally {
             parcel.recycle()
         }
