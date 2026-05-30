@@ -42,7 +42,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
 
     // Plugin SDK
-    implementation("com.github.dokuen-dev.dokuen-reader:ocr:main-SNAPSHOT")
+    implementation("com.github.dokuen-dev.dokuen-reader:ocr:0.4.1")
 
     // ML Kit Text Recognition
     implementation(libs.text.recognition.japanese)

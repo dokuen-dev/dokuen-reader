@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.1]
+
+### Changed
+
+- Updated documentation to recommend linking against explicit release versions rather than
+  `main-SNAPSHOT`.
+- Updated all sample plugins to use SDK version `0.4.1` by default.
+
 ## [0.4.0]
 
 ### Added

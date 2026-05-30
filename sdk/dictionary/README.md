@@ -1,5 +1,7 @@
 # Dokuen Dictionary Plugin SDK
 
+[![](https://jitpack.io/v/dokuen-dev/dokuen-reader.svg)](https://jitpack.io/#dokuen-dev/dokuen-reader)
+
 Build dictionary lookup plugins for Dokuen Reader. This SDK provides a Kotlin-first
 development experience with native coroutine support, structured definition data, and
 automatic lifecycle management.
@@ -10,7 +12,7 @@ automatic lifecycle management.
 2. [ ] Set `minSdk` >= 29 in your `build.gradle.kts`.
 3. [ ] Add the JitPack repository to your `settings.gradle.kts` (see [Installation](#installation)).
 4. [ ] Add the SDK dependency:
-   `implementation("com.github.dokuen-dev.dokuen-reader:dictionary:main-SNAPSHOT")`
+   `implementation("com.github.dokuen-dev.dokuen-reader:dictionary:VERSION")`
 5. [ ] Create your service class extending `DictionaryPluginService`.
 6. [ ] Add all required metadata to your `AndroidManifest.xml`
    (see [AndroidManifest.xml](#androidmanifestxml)).
@@ -38,13 +40,10 @@ Then add the SDK dependency:
 
 ```kotlin
 dependencies {
-    implementation("com.github.dokuen-dev.dokuen-reader:dictionary:main-SNAPSHOT")
+    // Replace VERSION with the latest release version (e.g. 0.4.1) shown in the badge above
+    implementation("com.github.dokuen-dev.dokuen-reader:dictionary:VERSION")
 }
 ```
-
-**Note:** During the beta period, use `main-SNAPSHOT` to get the latest development
-version. When the SDK is officially released, versioned releases (e.g., `1.0.0`) will
-be available.
 
 The SDK follows [semantic versioning](https://semver.org/):
 
