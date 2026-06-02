@@ -42,7 +42,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
 
     // Plugin SDK
-    implementation("com.github.dokuen-dev.dokuen-reader:dictionary:0.4.1")
+    implementation("com.github.dokuen-dev.dokuen-reader:dictionary:0.5.0")
 
     // Unit testing
     testImplementation(libs.junit)

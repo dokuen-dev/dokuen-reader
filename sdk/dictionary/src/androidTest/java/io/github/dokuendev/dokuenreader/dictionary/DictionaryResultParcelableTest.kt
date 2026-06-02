@@ -182,7 +182,6 @@ class DictionaryResultParcelableTest {
         val bodyStyle = InlineStyle().apply {
             bold = true
             italic = true
-            listItemOrdinal = 1
         }
 
         val body = StyledText().apply {

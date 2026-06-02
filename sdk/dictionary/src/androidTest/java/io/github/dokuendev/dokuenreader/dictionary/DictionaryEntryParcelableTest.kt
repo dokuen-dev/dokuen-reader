@@ -216,27 +216,23 @@ class DictionaryEntryParcelableTest {
 
     @Test
     fun dictionaryEntry_complexEntry_canBeParceled() {
-        val bodyStyle1 = InlineStyle().apply {
-            listItemOrdinal = 1
+        val block1 = BlockSpan().apply {
+            startIndex = 0
+            endIndex = 6
+            blockType = 1 // BLOCK_TYPE_LIST_ITEM
+            listMarker = "1."
         }
-        val bodyStyle2 = InlineStyle().apply {
-            listItemOrdinal = 2
+        val block2 = BlockSpan().apply {
+            startIndex = 7
+            endIndex = 17
+            blockType = 1 // BLOCK_TYPE_LIST_ITEM
+            listMarker = "2."
         }
 
         val body = StyledText().apply {
             text = "to eat\nto live on"
-            styledSpans = arrayOf(
-                StyledSpan().apply {
-                    startIndex = 0
-                    endIndex = 6
-                    style = bodyStyle1
-                },
-                StyledSpan().apply {
-                    startIndex = 7
-                    endIndex = 17
-                    style = bodyStyle2
-                }
-            )
+            blockSpans = arrayOf(block1, block2)
+            styledSpans = null
             rubySpans = null
         }
 
@@ -264,10 +260,12 @@ class DictionaryEntryParcelableTest {
             assertEquals(1, unparceled.pronunciation!!.size)
             assertEquals("た", unparceled.pronunciation!![0].rubyText)
             assertEquals("to eat\nto live on", unparceled.body.text)
-            assertNotNull(unparceled.body.styledSpans)
-            assertEquals(2, unparceled.body.styledSpans!!.size)
-            assertEquals(1, unparceled.body.styledSpans!![0].style.listItemOrdinal)
-            assertEquals(2, unparceled.body.styledSpans!![1].style.listItemOrdinal)
+            assertNotNull(unparceled.body.blockSpans)
+            assertEquals(2, unparceled.body.blockSpans!!.size)
+            assertEquals(1, unparceled.body.blockSpans!![0].blockType)
+            assertEquals("1.", unparceled.body.blockSpans!![0].listMarker)
+            assertEquals(1, unparceled.body.blockSpans!![1].blockType)
+            assertEquals("2.", unparceled.body.blockSpans!![1].listMarker)
         } finally {
             parcel.recycle()
         }

@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.5.0]
+
+### Added
+
+- `BlockSpan` AIDL and class to support nested block-level layout containers (paragraphs, list
+  items, boxes, and tables) separated from inline text styling.
+- Kotlin helper constructor `BlockSpan()` and added `blockSpans` support to the `StyledText()`
+  factory.
+
+### Changed
+
+- Refactored `StyledText` to a "Separated Span" architecture, separating structural layout
+  (`blockSpans`) from inline formatting (`styledSpans`).
+- Cleaned up `InlineStyle` by removing deprecated block-level properties (`listItemOrdinal`,
+  `listIndentLevel`, `listMarkerOverride`, `isBlock`, `isTable`).
+- Renamed `backgroundColor` to `textBackgroundColor` in `InlineStyle` to separate character
+  highlight from block container backgrounds.
+- Corrected span conflict resolution semantics description in documentation and AIDL to clarify that
+  scalar properties follow "innermost-wins" behavior.
+
 ## [0.4.1]
 
 ### Changed

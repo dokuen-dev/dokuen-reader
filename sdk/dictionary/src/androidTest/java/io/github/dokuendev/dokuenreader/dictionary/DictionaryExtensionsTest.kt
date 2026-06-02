@@ -24,12 +24,7 @@ class DictionaryExtensionsTest {
         assertFalse(style.italic)
         assertEquals(0.0f, style.fontSize)
         assertEquals(0, style.foregroundColor)
-        assertEquals(0, style.backgroundColor)
-        assertEquals(0, style.listItemOrdinal)
-        assertEquals(0, style.listIndentLevel)
-        assertNull(style.listMarkerOverride)
-        assertFalse(style.isBlock)
-        assertFalse(style.isTable)
+        assertEquals(0, style.textBackgroundColor)
         assertNull(style.hoverText)
         assertNull(style.linkUrl)
     }
@@ -41,12 +36,7 @@ class DictionaryExtensionsTest {
             italic = true,
             fontSize = 1.4f,
             foregroundColor = Color.BLUE,
-            backgroundColor = Color.RED,
-            listItemOrdinal = 3,
-            listIndentLevel = 2,
-            listMarkerOverride = "•",
-            isBlock = true,
-            isTable = true,
+            textBackgroundColor = Color.RED,
             hoverText = "Hover Text",
             linkUrl = "action:test"
         )
@@ -54,14 +44,38 @@ class DictionaryExtensionsTest {
         assertTrue(style.italic)
         assertEquals(1.4f, style.fontSize, 0.001f)
         assertEquals(Color.BLUE, style.foregroundColor)
-        assertEquals(Color.RED, style.backgroundColor)
-        assertEquals(3, style.listItemOrdinal)
-        assertEquals(2, style.listIndentLevel)
-        assertEquals("•", style.listMarkerOverride)
-        assertTrue(style.isBlock)
-        assertTrue(style.isTable)
+        assertEquals(Color.RED, style.textBackgroundColor)
         assertEquals("Hover Text", style.hoverText)
         assertEquals("action:test", style.linkUrl)
+    }
+
+    @Test
+    fun blockSpan_factoryConstructor_correctlySetsDefaultValues() {
+        val block = BlockSpan(0, 10)
+        assertEquals(0, block.startIndex)
+        assertEquals(10, block.endIndex)
+        assertEquals(BLOCK_TYPE_NORMAL, block.blockType)
+        assertEquals(0, block.indentLevel)
+        assertNull(block.listMarker)
+        assertEquals(0, block.backgroundColor)
+    }
+
+    @Test
+    fun blockSpan_factoryConstructor_setsSpecifiedValues() {
+        val block = BlockSpan(
+            startIndex = 5,
+            endIndex = 15,
+            blockType = BLOCK_TYPE_LIST_ITEM,
+            indentLevel = 2,
+            listMarker = "•",
+            backgroundColor = Color.GREEN
+        )
+        assertEquals(5, block.startIndex)
+        assertEquals(15, block.endIndex)
+        assertEquals(BLOCK_TYPE_LIST_ITEM, block.blockType)
+        assertEquals(2, block.indentLevel)
+        assertEquals("•", block.listMarker)
+        assertEquals(Color.GREEN, block.backgroundColor)
     }
 
     @Test
@@ -84,15 +98,20 @@ class DictionaryExtensionsTest {
     @Test
     fun styledText_factoryConstructor_setsSpecifiedValues() {
         val style = InlineStyle(bold = true)
+        val blockSpans = arrayOf(BlockSpan(0, 5, BLOCK_TYPE_NORMAL))
         val styledSpans = arrayOf(StyledSpan(0, 5, style))
         val rubySpans = arrayOf(RubySpan(0, 5, "ruby"))
         val styledText = StyledText(
             text = "Hello",
+            blockSpans = blockSpans,
             styledSpans = styledSpans,
             rubySpans = rubySpans
         )
 
         assertEquals("Hello", styledText.text)
+        assertNotNull(styledText.blockSpans)
+        assertEquals(1, styledText.blockSpans.size)
+        assertEquals(BLOCK_TYPE_NORMAL, styledText.blockSpans[0].blockType)
         assertNotNull(styledText.styledSpans)
         assertEquals(1, styledText.styledSpans.size)
         assertEquals(style.bold, styledText.styledSpans[0].style.bold)

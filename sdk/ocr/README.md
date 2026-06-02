@@ -38,7 +38,7 @@ Then add the SDK dependency in your module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    // Replace VERSION with the latest release version (e.g. 0.4.1) shown in the badge above
+    // Replace VERSION with the latest release version (e.g. 0.5.0) shown in the badge above
     implementation("com.github.dokuen-dev.dokuen-reader:ocr:VERSION")
 }
 ```

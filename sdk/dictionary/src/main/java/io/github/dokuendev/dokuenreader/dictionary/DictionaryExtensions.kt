@@ -32,15 +32,18 @@ fun DictionaryEntry(
  * Creates a StyledText with the specified properties.
  *
  * @param text The plain text content
- * @param styledSpans Optional style annotations applied to character ranges
+ * @param blockSpans Optional block-level layout containers applied to character ranges
+ * @param styledSpans Optional inline style annotations applied to character ranges
  * @param rubySpans Optional ruby text annotations for character ranges
  */
 fun StyledText(
     text: String,
+    blockSpans: Array<BlockSpan>? = null,
     styledSpans: Array<StyledSpan>? = null,
     rubySpans: Array<RubySpan>? = null
 ): StyledText = StyledText().apply {
     this.text = text
+    this.blockSpans = blockSpans
     this.styledSpans = styledSpans
     this.rubySpans = rubySpans
 }
@@ -90,27 +93,55 @@ fun StyledSpan(
     this.style = style
 }
 
+/**
+ * Creates a BlockSpan with the specified properties.
+ *
+ * @param startIndex Start index in the text (inclusive)
+ * @param endIndex End index in the text (exclusive)
+ * @param blockType Block type: 0=Normal, 1=List Item, 2=Box, 3=Table
+ * @param indentLevel Indent depth (0 = no indent, 1+ = indent level)
+ * @param listMarker Optional list marker string (only used for blockType=1)
+ * @param backgroundColor Background color in ARGB format (0 = no background)
+ */
+fun BlockSpan(
+    startIndex: Int,
+    endIndex: Int,
+    blockType: Int = 0,
+    indentLevel: Int = 0,
+    listMarker: String? = null,
+    backgroundColor: Int = 0
+): BlockSpan = BlockSpan().apply {
+    this.startIndex = startIndex
+    this.endIndex = endIndex
+    this.blockType = blockType
+    this.indentLevel = indentLevel
+    this.listMarker = listMarker
+    this.backgroundColor = backgroundColor
+}
+
 // ============================================================================
 // Constants
 // ============================================================================
 
 /**
- * Sentinel value for [InlineStyle.listItemOrdinal] that marks a bullet list item.
- *
- * When `listItemOrdinal` is set to this value, the item is rendered with a default
- * bullet marker ("•") unless `listMarkerOverride` is set.
- *
- * Note: `listMarkerOverride` only has an effect if `listItemOrdinal` is non-zero (such as [LIST_ITEM_BULLET]).
- * Setting `listItemOrdinal` to `0` (default) takes precedence and means the span is not a list item,
- * regardless of whether `listMarkerOverride` is specified.
- *
- * ```kotlin
- * InlineStyle(listItemOrdinal = LIST_ITEM_BULLET)           // "•" marker
- * InlineStyle(listItemOrdinal = LIST_ITEM_BULLET,
- *             listMarkerOverride = "→ ")                     // "→ " marker
- * ```
+ * Block type constant for normal paragraphs.
  */
-const val LIST_ITEM_BULLET = -1
+const val BLOCK_TYPE_NORMAL = 0
+
+/**
+ * Block type constant for list items.
+ */
+const val BLOCK_TYPE_LIST_ITEM = 1
+
+/**
+ * Block type constant for box containers with background.
+ */
+const val BLOCK_TYPE_BOX = 2
+
+/**
+ * Block type constant for table blocks.
+ */
+const val BLOCK_TYPE_TABLE = 3
 
 /**
  * Creates an InlineStyle with the specified properties.
@@ -118,14 +149,8 @@ const val LIST_ITEM_BULLET = -1
  * @param bold Whether the text should be bold
  * @param italic Whether the text should be italic
  * @param fontSize Relative font size multiplier (1.0 = normal, 0.8 = smaller, 1.2 = larger)
- * @param foregroundColor Foreground color in ARGB format (0 = use default theme color)
- * @param backgroundColor Background color in ARGB format (0 = no background)
- * @param listItemOrdinal List item type and ordinal: 0 = not a list item, >0 = numbered position,
- *   [LIST_ITEM_BULLET] (-1) = bullet list item.
- * @param listIndentLevel Indent depth for list items (0 = no indent, 1+ = indent level)
- * @param listMarkerOverride Custom list marker override string (only has an effect if [listItemOrdinal] is non-zero)
- * @param isBlock Whether this span represents a block container
- * @param isTable Whether this span represents a table block
+ * @param foregroundColor Foreground (text) color in ARGB format (0 = use default theme color)
+ * @param textBackgroundColor Text background color in ARGB format (0 = no background)
  * @param hoverText If non-null, this span represents clickable pop-up hover text
  * @param linkUrl If non-null, this span represents a link with the specified URL
  */
@@ -134,12 +159,7 @@ fun InlineStyle(
     italic: Boolean = false,
     fontSize: Float = 1.0f,
     foregroundColor: Int = 0,
-    backgroundColor: Int = 0,
-    listItemOrdinal: Int = 0,
-    listIndentLevel: Int = 0,
-    listMarkerOverride: String? = null,
-    isBlock: Boolean = false,
-    isTable: Boolean = false,
+    textBackgroundColor: Int = 0,
     hoverText: String? = null,
     linkUrl: String? = null
 ): InlineStyle = InlineStyle().apply {
@@ -147,12 +167,7 @@ fun InlineStyle(
     this.italic = italic
     this.fontSize = fontSize
     this.foregroundColor = foregroundColor
-    this.backgroundColor = backgroundColor
-    this.listItemOrdinal = listItemOrdinal
-    this.listIndentLevel = listIndentLevel
-    this.listMarkerOverride = listMarkerOverride
-    this.isBlock = isBlock
-    this.isTable = isTable
+    this.textBackgroundColor = textBackgroundColor
     this.hoverText = hoverText
     this.linkUrl = linkUrl
 }

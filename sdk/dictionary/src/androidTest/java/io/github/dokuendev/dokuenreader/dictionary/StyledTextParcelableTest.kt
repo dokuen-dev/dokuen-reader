@@ -21,6 +21,7 @@ class StyledTextParcelableTest {
     fun styledText_plainText_canBeParceled() {
         val original = StyledText().apply {
             text = "Simple plain text"
+            blockSpans = null
             styledSpans = null
             rubySpans = null
         }
@@ -33,8 +34,46 @@ class StyledTextParcelableTest {
             val unparceled = StyledText.CREATOR.createFromParcel(parcel)
 
             assertEquals("Simple plain text", unparceled.text)
+            assertNull(unparceled.blockSpans)
             assertNull(unparceled.styledSpans)
             assertNull(unparceled.rubySpans)
+        } finally {
+            parcel.recycle()
+        }
+    }
+
+    @Test
+    fun styledText_withBlockSpans_canBeParceled() {
+        val original = StyledText().apply {
+            text = "List item text"
+            blockSpans = arrayOf(
+                BlockSpan().apply {
+                    startIndex = 0
+                    endIndex = 14
+                    blockType = 1 // BLOCK_TYPE_LIST_ITEM
+                    indentLevel = 1
+                    listMarker = "•"
+                }
+            )
+            styledSpans = null
+            rubySpans = null
+        }
+
+        val parcel = Parcel.obtain()
+        try {
+            original.writeToParcel(parcel, 0)
+            parcel.setDataPosition(0)
+
+            val unparceled = StyledText.CREATOR.createFromParcel(parcel)
+
+            assertEquals("List item text", unparceled.text)
+            assertNotNull(unparceled.blockSpans)
+            assertEquals(1, unparceled.blockSpans!!.size)
+            assertEquals(0, unparceled.blockSpans!![0].startIndex)
+            assertEquals(14, unparceled.blockSpans!![0].endIndex)
+            assertEquals(1, unparceled.blockSpans!![0].blockType)
+            assertEquals(1, unparceled.blockSpans!![0].indentLevel)
+            assertEquals("•", unparceled.blockSpans!![0].listMarker)
         } finally {
             parcel.recycle()
         }
@@ -121,7 +160,7 @@ class StyledTextParcelableTest {
     }
 
     @Test
-    fun styledText_withBothSpanTypes_canBeParceled() {
+    fun styledText_withAllSpanTypes_canBeParceled() {
         val style = InlineStyle().apply {
             bold = true
             foregroundColor = Color.BLUE
@@ -129,6 +168,13 @@ class StyledTextParcelableTest {
 
         val original = StyledText().apply {
             text = "漢字 with formatting"
+            blockSpans = arrayOf(
+                BlockSpan().apply {
+                    startIndex = 0
+                    endIndex = 20
+                    blockType = 0
+                }
+            )
             styledSpans = arrayOf(
                 StyledSpan().apply {
                     startIndex = 0
@@ -154,6 +200,9 @@ class StyledTextParcelableTest {
 
             assertEquals("漢字 with formatting", unparceled.text)
 
+            assertNotNull(unparceled.blockSpans)
+            assertEquals(1, unparceled.blockSpans!!.size)
+
             assertNotNull(unparceled.styledSpans)
             assertEquals(1, unparceled.styledSpans!!.size)
             assertTrue(unparceled.styledSpans!![0].style.bold)
@@ -171,6 +220,7 @@ class StyledTextParcelableTest {
     fun styledText_emptyArrays_canBeParceled() {
         val original = StyledText().apply {
             text = "Text with empty arrays"
+            blockSpans = arrayOf()
             styledSpans = arrayOf()
             rubySpans = arrayOf()
         }
@@ -183,6 +233,8 @@ class StyledTextParcelableTest {
             val unparceled = StyledText.CREATOR.createFromParcel(parcel)
 
             assertEquals("Text with empty arrays", unparceled.text)
+            assertNotNull(unparceled.blockSpans)
+            assertEquals(0, unparceled.blockSpans!!.size)
             assertNotNull(unparceled.styledSpans)
             assertEquals(0, unparceled.styledSpans!!.size)
             assertNotNull(unparceled.rubySpans)

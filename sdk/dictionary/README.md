@@ -40,7 +40,7 @@ Then add the SDK dependency:
 
 ```kotlin
 dependencies {
-    // Replace VERSION with the latest release version (e.g. 0.4.1) shown in the badge above
+    // Replace VERSION with the latest release version (e.g. 0.5.0) shown in the badge above
     implementation("com.github.dokuen-dev.dokuen-reader:dictionary:VERSION")
 }
 ```
@@ -142,15 +142,16 @@ class MyDictionaryPlugin : DictionaryPluginService() {
         val text = buildString {
             append("${match.partOfSpeech}\n")
             match.senses.forEachIndexed { index, sense ->
-                append("${index + 1}. $sense\n")
+                append("$sense\n")
             }
         }
 
-        val spans = mutableListOf<StyledSpan>()
+        val styledSpans = mutableListOf<StyledSpan>()
+        val blockSpans = mutableListOf<BlockSpan>()
 
         // Style the part-of-speech tag
         val posLength = match.partOfSpeech.length
-        spans.add(StyledSpan(
+        styledSpans.add(StyledSpan(
             startIndex = 0,
             endIndex = posLength,
             style = InlineStyle(
@@ -160,22 +161,25 @@ class MyDictionaryPlugin : DictionaryPluginService() {
             )
         ))
 
-        // Style numbered list items
+        // Create list item blocks for each sense
         var offset = posLength + 1
         match.senses.forEachIndexed { index, sense ->
-            val itemText = "${index + 1}. $sense\n"
-            spans.add(StyledSpan(
+            val itemText = "$sense\n"
+            blockSpans.add(BlockSpan(
                 startIndex = offset,
                 endIndex = offset + itemText.length - 1,
-                style = InlineStyle(
-                    listItemOrdinal = index + 1,
-                    listIndentLevel = 1
-                )
+                blockType = BLOCK_TYPE_LIST_ITEM,
+                indentLevel = 1,
+                listMarker = "${index + 1}."
             ))
             offset += itemText.length
         }
 
-        return StyledText(text, spans)
+        return StyledText(
+            text = text,
+            blockSpans = blockSpans.toTypedArray(),
+            styledSpans = styledSpans.toTypedArray()
+        )
     }
 
     override fun onShutdown() {
@@ -640,170 +644,211 @@ DictionaryEntry(
 A text string paired with optional formatting spans and ruby annotations. Think of it
 as an IPC-safe equivalent of Compose `AnnotatedString`.
 
-| Field         | Type            | Description                                    |
-|---------------|-----------------|------------------------------------------------|
-| `text`        | `String`        | The plain text content.                        |
-| `styledSpans` | `StyledSpan[]?` | Formatting annotations (bold, italic, color…). |
-| `rubySpans`   | `RubySpan[]?`   | Ruby text annotations within the body.         |
+StyledText uses a **"Separated Span" architecture** where the flat text string is the
+single source of truth, and three independent span arrays define structure and styling:
+
+| Field         | Type            | Description                                      |
+|---------------|-----------------|--------------------------------------------------|
+| `text`        | `String`        | The plain text content.                          |
+| `blockSpans`  | `BlockSpan[]?`  | Layout containers (lists, boxes, tables).        |
+| `styledSpans` | `StyledSpan[]?` | Inline text formatting (bold, italic, colors).   |
+| `rubySpans`   | `RubySpan[]?`   | Ruby text annotations (pronunciation, furigana). |
+
+**Architecture:**
+
+- **BlockSpan**: Defines layout structure (where paragraphs, list items, boxes, and tables
+  start/end)
+- **StyledSpan**: Applies inline text formatting within those structures
+- **RubySpan**: Adds pronunciation annotations
 
 **Example:**
 
 ```kotlin
 StyledText(
-    text = "noun\n1. food\n2. meal",
+    text = "noun\nfood\nmeal",
+    blockSpans = listOf(
+        BlockSpan(5, 9, blockType = BLOCK_TYPE_LIST_ITEM, indentLevel = 1, listMarker = "1."),
+        BlockSpan(10, 14, blockType = BLOCK_TYPE_LIST_ITEM, indentLevel = 1, listMarker = "2.")
+    ),
     styledSpans = listOf(
         // Style the part-of-speech tag
         StyledSpan(0, 4, InlineStyle(
             bold = true,
             fontSize = 0.9f,
             foregroundColor = 0xFF1976D2.toInt()
-        )),
-        // Style list items
-        StyledSpan(5, 13, InlineStyle(listItemOrdinal = 1)),
-        StyledSpan(14, 22, InlineStyle(listItemOrdinal = 2))
+        ))
     )
 )
 ```
 
+#### `BlockSpan`
+
+A `BlockSpan` defines block-level layout for a character range. BlockSpans use **nesting
+semantics** — blocks define hierarchical structure and can be nested within each other.
+
+**BlockSpan Fields:**
+
+| Field             | Type      | Description                                                                  |
+|-------------------|-----------|------------------------------------------------------------------------------|
+| `startIndex`      | `Int`     | Inclusive start position in the text string.                                 |
+| `endIndex`        | `Int`     | Exclusive end position in the text string.                                   |
+| `blockType`       | `Int`     | Block type: 0=Normal, 1=List Item, 2=Box, 3=Table.                           |
+| `indentLevel`     | `Int`     | Indent depth (0 = no indent, 1+ = indent level, typically 16dp per level).   |
+| `listMarker`      | `String?` | Optional marker string for list items (e.g., "•", "1.", "α.").               |
+| `backgroundColor` | `Int`     | Background color in ARGB format. 0 = transparent. Primarily used with boxes. |
+
+**Block Type Constants:**
+
+```kotlin
+import io.github.dokuendev.dokuenreader.dictionary.*
+
+BLOCK_TYPE_NORMAL    // 0 - Normal paragraph (default)
+BLOCK_TYPE_LIST_ITEM // 1 - List item with marker and hanging indent
+BLOCK_TYPE_BOX       // 2 - Box with background color
+BLOCK_TYPE_TABLE     // 3 - Table (parsed as pipe-delimited grid)
+```
+
+**Nesting Semantics:**
+
+BlockSpans define hierarchical structure. Nested blocks inherit context from their
+parent blocks. For example, a list item within a box container, or a table within
+a list item.
+
+**Example - Simple List:**
+
+```kotlin
+import io.github.dokuendev.dokuenreader.dictionary.*
+
+val text = "First item\nSecond item\nThird item"
+val blockSpans = listOf(
+    BlockSpan(0, 10, BLOCK_TYPE_LIST_ITEM, indentLevel = 1, listMarker = "•"),
+    BlockSpan(11, 22, BLOCK_TYPE_LIST_ITEM, indentLevel = 1, listMarker = "•"),
+    BlockSpan(23, 33, BLOCK_TYPE_LIST_ITEM, indentLevel = 1, listMarker = "•")
+)
+```
+
+**Example - Nested List:**
+
+```kotlin
+val text = "Parent item\nChild item\nAnother child"
+val blockSpans = listOf(
+    BlockSpan(0, 11, BLOCK_TYPE_LIST_ITEM, indentLevel = 1, listMarker = "1."),
+    BlockSpan(12, 22, BLOCK_TYPE_LIST_ITEM, indentLevel = 2, listMarker = "•"),
+    BlockSpan(23, 36, BLOCK_TYPE_LIST_ITEM, indentLevel = 2, listMarker = "•")
+)
+```
+
+**Example - Box with Background:**
+
+```kotlin
+val text = "Important note: This is highlighted content."
+val blockSpans = listOf(
+    BlockSpan(
+        startIndex = 0,
+        endIndex = 44,
+        blockType = BLOCK_TYPE_BOX,
+        indentLevel = 0,
+        backgroundColor = 0xFFFFF9C4.toInt() // Light yellow
+    )
+)
+```
+
+**Example - Table:**
+
+```kotlin
+val text =
+    "| Expression | Reading | Meaning |\n| 食べる | たべる | to eat |\n| 飲む | のむ | to drink |"
+val blockSpans = listOf(
+    BlockSpan(
+        startIndex = 0,
+        endIndex = text.length,
+        blockType = BLOCK_TYPE_TABLE,
+        indentLevel = 1
+    )
+)
+```
+
+**Table Format:**
+
+Tables use pipe-delimited syntax. Each line is a row, cells are separated by `|`:
+
+- First row is treated as the header (styled with surfaceVariant background)
+- Cells are separated by `|` characters
+- Leading/trailing whitespace is trimmed from cell content
+- Line breaks within cells can be created using `<br>` or `<br/>` tags
+
 #### `StyledSpan` and `InlineStyle`
 
 A `StyledSpan` pairs a character range (`startIndex` inclusive, `endIndex` exclusive)
-with an `InlineStyle`.
+with an `InlineStyle`. StyledSpans use **"innermost-wins" override semantics** for
+scalar properties, and **additive merge** for boolean properties.
 
 **InlineStyle Fields:**
 
-| Field                | Type      | Description                                                                                        |
-|----------------------|-----------|----------------------------------------------------------------------------------------------------|
-| `bold`               | `Boolean` | Bold text.                                                                                         |
-| `italic`             | `Boolean` | Italic text.                                                                                       |
-| `fontSize`           | `Float`   | Relative size multiplier (1.0 = normal, 0.9 = smaller, 1.2 = larger).                              |
-| `foregroundColor`    | `Int`     | ARGB color. `0` = use default text color (theme-appropriate).                                      |
-| `backgroundColor`    | `Int`     | ARGB color. `0` = no background.                                                                   |
-| `listItemOrdinal`    | `Int`     | `0` = not a list item. `>0` = numbered (e.g., 1 → "1."). `-1` (`LIST_ITEM_BULLET`) = bullet ("•"). |
-| `listIndentLevel`    | `Int`     | Indent depth; each level adds 16dp. Default 1 for list items.                                      |
-| `listMarkerOverride` | `String?` | Custom marker string (e.g. `"① "`, `"α. "`). Only has effect if `listItemOrdinal != 0`.            |
-| `isBlock`            | `Boolean` | Whether this span represents an explicit block container.                                          |
-| `isTable`            | `Boolean` | Whether this span represents an aligned grid table block (flat pipe grid layout).                  |
-| `hoverText`          | `String?` | Clicking this text range opens a pop-up displaying this additional text.                           |
-| `linkUrl`            | `String?` | Target URL/URI string to make the text range an underlined, styled hyperlink.                      |
+| Field                 | Type      | Description                                                                   |
+|-----------------------|-----------|-------------------------------------------------------------------------------|
+| `bold`                | `Boolean` | Bold text.                                                                    |
+| `italic`              | `Boolean` | Italic text.                                                                  |
+| `fontSize`            | `Float`   | Relative size multiplier (1.0 = normal, 0.9 = smaller, 1.2 = larger).         |
+| `foregroundColor`     | `Int`     | Text color in ARGB format. `0` = use default theme color.                     |
+| `textBackgroundColor` | `Int`     | Text highlight color in ARGB format. `0` = no background (transparent).       |
+| `hoverText`           | `String?` | Clicking this text range opens a pop-up displaying this additional text.      |
+| `linkUrl`             | `String?` | Target URL/URI string to make the text range an underlined, styled hyperlink. |
 
-**Span Overlap Behavior:**
+**Span Semantics:**
 
-Overlapping spans are merged additively:
+StyledSpans follow **"innermost-wins" override semantics**:
 
-- Multiple spans can apply bold, italic, etc. to the same text
-- Where two spans set the same scalar property (color, font size), the later span in the array wins
-- This matches Compose `AnnotatedString` semantics
+- **Boolean properties** (bold, italic): Multiple spans are combined **additively**
+- **Scalar properties** (fontSize, foregroundColor, textBackgroundColor): The **innermost (nested
+  deepest / narrowest range)** span wins for overlapping ranges. If ranges are identical, the last
+  span in the array wins.
 
-**Example:**
+This matches Compose `AnnotatedString` semantics and ensures predictable behavior.
+
+**Example - Additive Boolean Properties:**
+
+```kotlin
+val text = "Bold and italic"
+val spans = listOf(
+    StyledSpan(0, 15, InlineStyle(bold = true)),      // Bold entire text
+    StyledSpan(9, 15, InlineStyle(italic = true))     // Add italic to "italic"
+)
+// Result:
+// [0-9):   bold only
+// [9-15):  bold + italic (additive)
+```
+
+**Example - Innermost-Wins for Scalar Properties:**
+
+```kotlin
+val text = "Color change"
+val spans = listOf(
+    StyledSpan(0, 12, InlineStyle(foregroundColor = 0xFFFF0000.toInt())),  // Red entire text
+    StyledSpan(6, 12, InlineStyle(foregroundColor = 0xFF0000FF.toInt()))   // Override with blue
+)
+// Result:
+// [0-6):   red
+// [6-12):  blue (innermost-wins override)
+```
+
+**Example - Combined Styling:**
 
 ```kotlin
 val spans = listOf(
     StyledSpan(0, 10, InlineStyle(bold = true)),
     StyledSpan(5, 15, InlineStyle(italic = true)),
-    StyledSpan(7, 12, InlineStyle(foregroundColor = 0xFFFF0000.toInt()))
+    StyledSpan(7, 12, InlineStyle(
+        foregroundColor = 0xFFFF0000.toInt(),
+        textBackgroundColor = 0xFFFFFF00.toInt()
+    ))
 )
 // Result:
 // [0-5):   bold
 // [5-7):   bold + italic
-// [7-10):  bold + italic + red
-// [10-12): italic + red
+// [7-10):  bold + italic + red text + yellow background
+// [10-12): italic + red text + yellow background
 // [12-15): italic
-```
-
-**List Items:**
-
-To create numbered lists, set `listItemOrdinal` to a positive integer. Dokuen will
-render the item with a prefix like "1.", "2.", etc., and apply indentation based on
-`listIndentLevel`.
-
-To create bullet lists, set `listItemOrdinal` to `LIST_ITEM_BULLET` (-1). Dokuen will
-render the item with a default "•" marker:
-
-```kotlin
-import io.github.dokuendev.dokuenreader.dictionary.LIST_ITEM_BULLET
-
-StyledSpan(0, 10, InlineStyle(
-    listItemOrdinal = LIST_ITEM_BULLET,
-    listIndentLevel = 1
-))
-```
-
-For custom markers (roman numerals, circled numbers, etc.), use `listMarkerOverride`
-on either numbered or bullet items.
-
-> [!NOTE]
-> `listMarkerOverride` is ignored if `listItemOrdinal` is 0 (i.e., the span is not a list item).
-
-```kotlin
-StyledSpan(0, 10, InlineStyle(
-    listItemOrdinal = LIST_ITEM_BULLET,
-    listMarkerOverride = "→ ",
-    listIndentLevel = 1
-))
-```
-
-**Blocks (`isBlock = true`):**
-
-To support standalone block containers (such as example boxes, cross-reference boxes, or card-like
-layouts), you can use the `isBlock` property.
-When `isBlock` is set to `true` on an `InlineStyle`, the host application renders the styled
-character range as a standalone block container separated from surrounding content.
-
-* **Indentation**: Blocks can be indented relative to their surrounding layout by setting
-  `listIndentLevel`.
-* **Sizing**: Blocks automatically grow to fit their content vertically and occupy the available
-  parent width.
-
-*Example Block:*
-
-```kotlin
-val blockSpan = StyledSpan(
-    startIndex = 0,
-    endIndex = blockText.length,
-    style = InlineStyle(
-        isBlock = true,
-        listIndentLevel = 1
-    )
-)
-```
-
-**Tables (`isTable = true`):**
-
-To support grid layouts, you can declare structured table blocks.
-When `isTable` is set to `true` on an `InlineStyle`, the host application interprets the text
-content of the span as a flat table grid using a markdown-like **pipe character (`|`)** layout.
-
-* **Row Structure**: Each line in the table text represents a row.
-* **Cell Bounds**: Rows must start with `| ` and end with ` |`. Cells are separated by ` | `.
-* **Explicit Cell Styling**: The host application does not automatically infer headers or highlight
-  specific rows differently. You control formatting (like bold headers, cell backgrounds, or colored
-  text) by explicitly setting nested `StyledSpan`s for individual cell contents.
-* **Indentation**: Tables can be cleanly aligned/indented like list items by setting
-  `listIndentLevel` on the table's `InlineStyle`.
-* **Formatting inside cells**: Text, child styled spans, and ruby annotations inside cells are fully
-  supported. They will be correctly preserved, styled, and positioned within their respective grid
-  cells relative to cell boundaries.
-* **Line breaks within cells**: You can introduce line breaks/newlines within a table cell using
-  HTML-style `<br>` or `<br/>` tags (case-insensitive).
-
-*Example Table:*
-
-```kotlin
-val tableText = """
-| Expression | Reading | Meaning |
-| 食べる | たべる | to eat |
-| 食らう | くらう | to devour |
-""".trimIndent()
-
-val tableSpan = StyledSpan(
-    startIndex = 0,
-    endIndex = tableText.length,
-    style = InlineStyle(
-        isTable = true,
-        listIndentLevel = 1
-    )
-)
 ```
 
 **Hover Text (`hoverText`):**
@@ -878,7 +923,7 @@ class MyDictionaryPlugin : DictionaryPluginService() {
             val word = actionPayload.removePrefix("favorite?word=")
             // Toggle word favorite in your database/state
             myDb.toggleFavorite(word)
-            
+
             // Fetch updated definitions to dynamically update the host popup
             val updatedResult = onLookup(word, 0, word.length)
             return CustomActionResult.UpdateResult(updatedResult)

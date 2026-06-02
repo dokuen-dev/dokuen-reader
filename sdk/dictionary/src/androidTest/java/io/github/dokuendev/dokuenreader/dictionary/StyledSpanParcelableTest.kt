@@ -79,7 +79,7 @@ class StyledSpanParcelableTest {
             italic = true
             fontSize = 1.5f
             foregroundColor = Color.RED
-            backgroundColor = Color.YELLOW
+            textBackgroundColor = Color.YELLOW
         }
         val original = StyledSpan().apply {
             startIndex = 5
@@ -100,37 +100,7 @@ class StyledSpanParcelableTest {
             assertTrue(unparceled.style.italic)
             assertEquals(1.5f, unparceled.style.fontSize, 0.001f)
             assertEquals(Color.RED, unparceled.style.foregroundColor)
-            assertEquals(Color.YELLOW, unparceled.style.backgroundColor)
-        } finally {
-            parcel.recycle()
-        }
-    }
-
-    @Test
-    fun styledSpan_withListStyle_canBeParceled() {
-        val style = InlineStyle().apply {
-            listItemOrdinal = 3
-            listIndentLevel = 2
-            listMarkerOverride = "• "
-        }
-        val original = StyledSpan().apply {
-            startIndex = 0
-            endIndex = 10
-            this.style = style
-        }
-
-        val parcel = Parcel.obtain()
-        try {
-            original.writeToParcel(parcel, 0)
-            parcel.setDataPosition(0)
-
-            val unparceled = StyledSpan.CREATOR.createFromParcel(parcel)
-
-            assertEquals(0, unparceled.startIndex)
-            assertEquals(10, unparceled.endIndex)
-            assertEquals(3, unparceled.style.listItemOrdinal)
-            assertEquals(2, unparceled.style.listIndentLevel)
-            assertEquals("• ", unparceled.style.listMarkerOverride)
+            assertEquals(Color.YELLOW, unparceled.style.textBackgroundColor)
         } finally {
             parcel.recycle()
         }

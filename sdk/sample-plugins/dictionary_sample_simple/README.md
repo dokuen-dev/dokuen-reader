@@ -110,11 +110,8 @@ Example entry structure:
 
 ```kotlin
 DictionaryEntry(
-    headword = StyledText(
-        text = "食べる",
-        rubySpans = arrayOf(RubySpan(0, 2, "た"))
-    ),
-    pronunciation = arrayOf("たべる"),
+    headword = "食べる",
+    pronunciation = arrayOf(RubySpan(0, 1, "た")),
     body = StyledText(
         text = "verb\nto eat; to consume",
         styledSpans = arrayOf(

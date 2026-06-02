@@ -32,12 +32,7 @@ class InlineStyleParcelableTest {
             assertFalse(unparceled.italic)
             assertEquals(0f, unparceled.fontSize, 0.001f)
             assertEquals(0, unparceled.foregroundColor)
-            assertEquals(0, unparceled.backgroundColor)
-            assertEquals(0, unparceled.listItemOrdinal)
-            assertEquals(0, unparceled.listIndentLevel)
-            assertNull(unparceled.listMarkerOverride)
-            assertFalse(unparceled.isBlock)
-            assertFalse(unparceled.isTable)
+            assertEquals(0, unparceled.textBackgroundColor)
             assertNull(unparceled.hoverText)
             assertNull(unparceled.linkUrl)
         } finally {
@@ -164,9 +159,9 @@ class InlineStyleParcelableTest {
     }
 
     @Test
-    fun inlineStyle_backgroundColor_canBeParceled() {
+    fun inlineStyle_textBackgroundColor_canBeParceled() {
         val original = InlineStyle().apply {
-            backgroundColor = Color.YELLOW
+            textBackgroundColor = Color.YELLOW
         }
 
         val parcel = Parcel.obtain()
@@ -176,7 +171,7 @@ class InlineStyleParcelableTest {
 
             val unparceled = InlineStyle.CREATOR.createFromParcel(parcel)
 
-            assertEquals(Color.YELLOW, unparceled.backgroundColor)
+            assertEquals(Color.YELLOW, unparceled.textBackgroundColor)
         } finally {
             parcel.recycle()
         }
@@ -186,7 +181,7 @@ class InlineStyleParcelableTest {
     fun inlineStyle_bothColors_canBeParceled() {
         val original = InlineStyle().apply {
             foregroundColor = Color.WHITE
-            backgroundColor = Color.BLACK
+            textBackgroundColor = Color.BLACK
         }
 
         val parcel = Parcel.obtain()
@@ -197,108 +192,9 @@ class InlineStyleParcelableTest {
             val unparceled = InlineStyle.CREATOR.createFromParcel(parcel)
 
             assertEquals(Color.WHITE, unparceled.foregroundColor)
-            assertEquals(Color.BLACK, unparceled.backgroundColor)
+            assertEquals(Color.BLACK, unparceled.textBackgroundColor)
         } finally {
             parcel.recycle()
-        }
-    }
-
-    @Test
-    fun inlineStyle_listItemOrdinal_canBeParceled() {
-        val original = InlineStyle().apply {
-            listItemOrdinal = 3
-        }
-
-        val parcel = Parcel.obtain()
-        try {
-            original.writeToParcel(parcel, 0)
-            parcel.setDataPosition(0)
-
-            val unparceled = InlineStyle.CREATOR.createFromParcel(parcel)
-
-            assertEquals(3, unparceled.listItemOrdinal)
-        } finally {
-            parcel.recycle()
-        }
-    }
-
-    @Test
-    fun inlineStyle_listIndentLevel_canBeParceled() {
-        val original = InlineStyle().apply {
-            listIndentLevel = 2
-        }
-
-        val parcel = Parcel.obtain()
-        try {
-            original.writeToParcel(parcel, 0)
-            parcel.setDataPosition(0)
-
-            val unparceled = InlineStyle.CREATOR.createFromParcel(parcel)
-
-            assertEquals(2, unparceled.listIndentLevel)
-        } finally {
-            parcel.recycle()
-        }
-    }
-
-    @Test
-    fun inlineStyle_listMarkerOverride_canBeParceled() {
-        val original = InlineStyle().apply {
-            listMarkerOverride = "• "
-        }
-
-        val parcel = Parcel.obtain()
-        try {
-            original.writeToParcel(parcel, 0)
-            parcel.setDataPosition(0)
-
-            val unparceled = InlineStyle.CREATOR.createFromParcel(parcel)
-
-            assertEquals("• ", unparceled.listMarkerOverride)
-        } finally {
-            parcel.recycle()
-        }
-    }
-
-    @Test
-    fun inlineStyle_nullListMarkerOverride_canBeParceled() {
-        val original = InlineStyle().apply {
-            listMarkerOverride = null
-        }
-
-        val parcel = Parcel.obtain()
-        try {
-            original.writeToParcel(parcel, 0)
-            parcel.setDataPosition(0)
-
-            val unparceled = InlineStyle.CREATOR.createFromParcel(parcel)
-
-            assertNull(unparceled.listMarkerOverride)
-        } finally {
-            parcel.recycle()
-        }
-    }
-
-    @Test
-    fun inlineStyle_customListMarkers_canBeParceled() {
-        val markers = listOf("α. ", "① ", "→ ", "★ ")
-
-        markers.forEach { marker ->
-            val original = InlineStyle().apply {
-                listMarkerOverride = marker
-            }
-
-            val parcel = Parcel.obtain()
-            try {
-                original.writeToParcel(parcel, 0)
-                parcel.setDataPosition(0)
-
-                val unparceled = InlineStyle.CREATOR.createFromParcel(parcel)
-
-                assertEquals(marker, unparceled.listMarkerOverride)
-            } finally {
-                parcel.recycle()
-            }
         }
     }
 
@@ -309,12 +205,7 @@ class InlineStyleParcelableTest {
             italic = true
             fontSize = 1.2f
             foregroundColor = Color.BLUE
-            backgroundColor = Color.LTGRAY
-            listItemOrdinal = 5
-            listIndentLevel = 3
-            listMarkerOverride = "→ "
-            isBlock = true
-            isTable = true
+            textBackgroundColor = Color.LTGRAY
             hoverText = "Pop-up description text"
             linkUrl = "https://example.com"
         }
@@ -330,36 +221,9 @@ class InlineStyleParcelableTest {
             assertTrue(unparceled.italic)
             assertEquals(1.2f, unparceled.fontSize, 0.001f)
             assertEquals(Color.BLUE, unparceled.foregroundColor)
-            assertEquals(Color.LTGRAY, unparceled.backgroundColor)
-            assertEquals(5, unparceled.listItemOrdinal)
-            assertEquals(3, unparceled.listIndentLevel)
-            assertEquals("→ ", unparceled.listMarkerOverride)
-            assertTrue(unparceled.isBlock)
-            assertTrue(unparceled.isTable)
+            assertEquals(Color.LTGRAY, unparceled.textBackgroundColor)
             assertEquals("Pop-up description text", unparceled.hoverText)
             assertEquals("https://example.com", unparceled.linkUrl)
-        } finally {
-            parcel.recycle()
-        }
-    }
-
-    @Test
-    fun inlineStyle_bulletListSentinel_canBeParceled() {
-        val original = InlineStyle().apply {
-            listItemOrdinal = -1 // LIST_ITEM_BULLET
-            listIndentLevel = 1
-        }
-
-        val parcel = Parcel.obtain()
-        try {
-            original.writeToParcel(parcel, 0)
-            parcel.setDataPosition(0)
-
-            val unparceled = InlineStyle.CREATOR.createFromParcel(parcel)
-
-            assertEquals(-1, unparceled.listItemOrdinal)
-            assertEquals(1, unparceled.listIndentLevel)
-            assertNull(unparceled.listMarkerOverride)
         } finally {
             parcel.recycle()
         }
