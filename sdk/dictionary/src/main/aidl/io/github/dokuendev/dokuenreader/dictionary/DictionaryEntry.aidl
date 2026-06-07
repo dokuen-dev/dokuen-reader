@@ -76,9 +76,17 @@ parcelable DictionaryEntry {
      * Each RubySpan pairs a character range in the headword with its reading.
      */
     @nullable RubySpan[] pronunciation;
-    
+
     /**
      * The definition body containing all senses, examples, and formatting.
      */
     StyledText body;
+    
+    /**
+     * Bitmask for entry-level presentation flags.
+     * 0 = Default presentation
+     * 1 = FLAG_HEADWORD_STROKE_ORDER (Host renders headword with stroke order font)
+     * * NOTE: If FLAG_HEADWORD_STROKE_ORDER is set then [pronunciation] is ignored.
+     */
+    int displayFlags;
 }

@@ -616,15 +616,17 @@ better ergonomics.
 
 Represents a single headword and its full definition.
 
-| Field           | Type          | Description                                                                                  |
-|-----------------|---------------|----------------------------------------------------------------------------------------------|
-| `headword`      | `String`      | The dictionary form of the word.                                                             |
-| `pronunciation` | `RubySpan[]?` | Ruby annotations for the headword. Each `RubySpan` pairs a character range with its reading. |
-| `body`          | `StyledText`  | The full definition content with optional formatting.                                        |
+| Field           | Type          | Description                                                                                                                                 |
+|-----------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| `headword`      | `String`      | The dictionary form of the word.                                                                                                            |
+| `pronunciation` | `RubySpan[]?` | Ruby annotations for the headword. Each `RubySpan` pairs a character range with its reading.                                                |
+| `body`          | `StyledText`  | The full definition content with optional formatting.                                                                                       |
+| `displayFlags`  | `Int`         | Bitmask for entry-level presentation rules. Use FLAG_HEADWORD_STROKE_ORDER to request a stroke-order diagram presentation for the headword. |
 
 **Example:**
 
 ```kotlin
+// 1. Standard Entry
 DictionaryEntry(
     headword = "食べる",
     pronunciation = listOf(
@@ -636,6 +638,14 @@ DictionaryEntry(
             StyledSpan(0, 7, InlineStyle(bold = true))  // bold "to eat"
         )
     )
+)
+
+// 2. Kanji Entry with stroke order diagram
+DictionaryEntry(
+    headword = "食",
+    pronunciation = null,
+    body = StyledText(text = "9 strokes, radical 184..."),
+    displayFlags = FLAG_HEADWORD_STROKE_ORDER
 )
 ```
 

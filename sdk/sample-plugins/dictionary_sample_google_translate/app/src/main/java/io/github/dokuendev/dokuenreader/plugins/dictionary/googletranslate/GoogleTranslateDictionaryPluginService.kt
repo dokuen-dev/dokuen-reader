@@ -408,7 +408,7 @@ class GoogleTranslateDictionaryPluginService : DictionaryPluginService() {
 
         return DictionaryEntry(
             headword = originalText,
-            pronunciation = emptyArray(),
+            pronunciation = null, // Null tells Dokuen to use the default pronunciation from the overlay
             body = StyledText(
                 text = bodyText,
                 styledSpans = arrayOf(

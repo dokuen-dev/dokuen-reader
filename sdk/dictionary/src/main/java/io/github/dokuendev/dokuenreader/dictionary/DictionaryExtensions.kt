@@ -17,15 +17,18 @@ package io.github.dokuendev.dokuenreader.dictionary
  * @param headword The dictionary form of the word being defined
  * @param pronunciation Optional ruby annotations for the headword (e.g., furigana)
  * @param body The complete definition content with formatting
+ * @param displayFlags Bitmask for entry-level presentation flags (default: 0)
  */
 fun DictionaryEntry(
     headword: String,
     pronunciation: Array<RubySpan>? = null,
-    body: StyledText
+    body: StyledText,
+    displayFlags: Int = 0
 ): DictionaryEntry = DictionaryEntry().apply {
     this.headword = headword
     this.pronunciation = pronunciation
     this.body = body
+    this.displayFlags = displayFlags
 }
 
 /**
@@ -142,6 +145,17 @@ const val BLOCK_TYPE_BOX = 2
  * Block type constant for table blocks.
  */
 const val BLOCK_TYPE_TABLE = 3
+
+/**
+ * Flag indicating the host app should render this entry's headword
+ * using a stroke-order font and enlarged presentation.
+ * * By default, dictionary entries display the headword alongside its pronunciation
+ *   (e.g., with furigana). This flag replaces that standard view with a large
+ *   stroke-order diagram, which is primarily intended for Kanji dictionaries.
+ * * Note: Stroke order display and furigana display are mutually exclusive.
+ *   When this flag is set, then [DictionaryEntry.pronunciation] will be ignored.
+ */
+const val FLAG_HEADWORD_STROKE_ORDER = 1 shl 0
 
 /**
  * Creates an InlineStyle with the specified properties.

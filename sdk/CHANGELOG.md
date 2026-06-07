@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.6.0]
+
+### Added
+
+- `displayFlags` integer bitmask to `DictionaryEntry` AIDL to support entry-level presentation
+  rules.
+- `FLAG_HEADWORD_STROKE_ORDER` constant in `DictionaryExtensions.kt` to allow plugins to request a
+  stroke-order diagram presentation for the headword.
+- Added `displayFlags` parameter to the `DictionaryEntry()` Kotlin helper constructor (defaults to
+  `0`).
+
 ## [0.5.0]
 
 ### Added
