@@ -86,6 +86,54 @@ class DictionaryEntryParcelableTest {
     }
 
     @Test
+    fun dictionaryEntry_withHeadwordSpans_canBeParceled() {
+        val body = StyledText().apply {
+            text = "Japanese language"
+            styledSpans = null
+            rubySpans = null
+        }
+
+        val original = DictionaryEntry().apply {
+            headword = "日本語"
+            pronunciation = null
+            headwordSpans = arrayOf(
+                HeadwordSpan().apply {
+                    startIndex = 0
+                    endIndex = 2
+                    linkUrl = "lookup:日本"
+                },
+                HeadwordSpan().apply {
+                    startIndex = 2
+                    endIndex = 3
+                    linkUrl = "lookup:語"
+                }
+            )
+            this.body = body
+        }
+
+        val parcel = Parcel.obtain()
+        try {
+            original.writeToParcel(parcel, 0)
+            parcel.setDataPosition(0)
+
+            val unparceled = DictionaryEntry.CREATOR.createFromParcel(parcel)
+
+            assertEquals("日本語", unparceled.headword)
+            assertNotNull(unparceled.headwordSpans)
+            assertEquals(2, unparceled.headwordSpans!!.size)
+            assertEquals(0, unparceled.headwordSpans!![0].startIndex)
+            assertEquals(2, unparceled.headwordSpans!![0].endIndex)
+            assertEquals("lookup:日本", unparceled.headwordSpans!![0].linkUrl)
+            assertEquals(2, unparceled.headwordSpans!![1].startIndex)
+            assertEquals(3, unparceled.headwordSpans!![1].endIndex)
+            assertEquals("lookup:語", unparceled.headwordSpans!![1].linkUrl)
+            assertEquals("Japanese language", unparceled.body.text)
+        } finally {
+            parcel.recycle()
+        }
+    }
+
+    @Test
     fun dictionaryEntry_withMultiplePronunciationSpans_canBeParceled() {
         val body = StyledText().apply {
             text = "Chinese characters; kanji"
@@ -245,6 +293,13 @@ class DictionaryEntryParcelableTest {
                     rubyText = "た"
                 }
             )
+            headwordSpans = arrayOf(
+                HeadwordSpan().apply {
+                    startIndex = 0
+                    endIndex = 3
+                    linkUrl = "lookup:食べる"
+                }
+            )
             this.body = body
         }
 
@@ -259,6 +314,11 @@ class DictionaryEntryParcelableTest {
             assertNotNull(unparceled.pronunciation)
             assertEquals(1, unparceled.pronunciation!!.size)
             assertEquals("た", unparceled.pronunciation!![0].rubyText)
+            assertNotNull(unparceled.headwordSpans)
+            assertEquals(1, unparceled.headwordSpans!!.size)
+            assertEquals(0, unparceled.headwordSpans!![0].startIndex)
+            assertEquals(3, unparceled.headwordSpans!![0].endIndex)
+            assertEquals("lookup:食べる", unparceled.headwordSpans!![0].linkUrl)
             assertEquals("to eat\nto live on", unparceled.body.text)
             assertNotNull(unparceled.body.blockSpans)
             assertEquals(2, unparceled.body.blockSpans!!.size)

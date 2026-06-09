@@ -16,17 +16,21 @@ package io.github.dokuendev.dokuenreader.dictionary
  *
  * @param headword The dictionary form of the word being defined
  * @param pronunciation Optional ruby annotations for the headword (e.g., furigana)
+ * @param headwordSpans Optional link annotations for character ranges within the headword.
+ *   Ranges must not overlap.
  * @param body The complete definition content with formatting
  * @param displayFlags Bitmask for entry-level presentation flags (default: 0)
  */
 fun DictionaryEntry(
     headword: String,
     pronunciation: Array<RubySpan>? = null,
+    headwordSpans: Array<HeadwordSpan>? = null,
     body: StyledText,
     displayFlags: Int = 0
 ): DictionaryEntry = DictionaryEntry().apply {
     this.headword = headword
     this.pronunciation = pronunciation
+    this.headwordSpans = headwordSpans
     this.body = body
     this.displayFlags = displayFlags
 }
@@ -77,6 +81,29 @@ fun RubySpan(
     this.startIndex = startIndex
     this.endIndex = endIndex
     this.rubyText = rubyText
+}
+
+/**
+ * Creates a HeadwordSpan with the specified properties.
+ *
+ * Makes a character range within a headword clickable with the given link target.
+ * Supported link formats are identical to [InlineStyle.linkUrl]:
+ * - `"lookup:{target}"` - triggers a new lookup for the target word
+ * - `"action:{payload}"` - triggers [DictionaryPluginService.onExecuteCustomAction]
+ * - `"https://..."` - opens an external URL in the system browser
+ *
+ * @param startIndex Start index in the headword string (inclusive)
+ * @param endIndex End index in the headword string (exclusive)
+ * @param linkUrl The link target. Must not be null or empty.
+ */
+fun HeadwordSpan(
+    startIndex: Int,
+    endIndex: Int,
+    linkUrl: String
+): HeadwordSpan = HeadwordSpan().apply {
+    this.startIndex = startIndex
+    this.endIndex = endIndex
+    this.linkUrl = linkUrl
 }
 
 /**

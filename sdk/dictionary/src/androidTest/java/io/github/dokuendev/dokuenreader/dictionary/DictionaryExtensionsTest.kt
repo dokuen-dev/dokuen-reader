@@ -82,16 +82,21 @@ class DictionaryExtensionsTest {
     fun dictionaryEntry_factoryConstructor_setsSpecifiedValues() {
         val bodyText = StyledText(text = "Word definition")
         val rubySpans = arrayOf(RubySpan(0, 2, "furigana"))
+        val hwSpans = arrayOf(HeadwordSpan(0, 2, "lookup:test"))
         val entry = DictionaryEntry(
             headword = "test",
             pronunciation = rubySpans,
+            headwordSpans = hwSpans,
             body = bodyText
         )
 
         assertEquals("test", entry.headword)
         assertNotNull(entry.pronunciation)
-        assertEquals(1, entry.pronunciation.size)
-        assertEquals("furigana", entry.pronunciation[0].rubyText)
+        assertEquals(1, entry.pronunciation!!.size)
+        assertEquals("furigana", entry.pronunciation!![0].rubyText)
+        assertNotNull(entry.headwordSpans)
+        assertEquals(1, entry.headwordSpans!!.size)
+        assertEquals("lookup:test", entry.headwordSpans!![0].linkUrl)
         assertEquals(bodyText, entry.body)
     }
 
@@ -122,7 +127,7 @@ class DictionaryExtensionsTest {
 
     @Test
     fun dictionaryResult_arrayConstructor_setsSpecifiedValues() {
-        val entry = DictionaryEntry("test", null, StyledText("def"))
+        val entry = DictionaryEntry("test", null, null, StyledText("def"))
         val result = DictionaryResult(arrayOf(entry))
 
         assertNotNull(result.entries)
@@ -132,12 +137,20 @@ class DictionaryExtensionsTest {
 
     @Test
     fun dictionaryResult_listConstructor_setsSpecifiedValues() {
-        val entry = DictionaryEntry("test", null, StyledText("def"))
+        val entry = DictionaryEntry("test", null, null, StyledText("def"))
         val result = DictionaryResult(listOf(entry).toTypedArray())
 
         assertNotNull(result.entries)
         assertEquals(1, result.entries.size)
         assertEquals("test", result.entries[0].headword)
+    }
+
+    @Test
+    fun headwordSpan_factoryConstructor_setsSpecifiedValues() {
+        val span = HeadwordSpan(0, 3, "lookup:test_word")
+        assertEquals(0, span.startIndex)
+        assertEquals(3, span.endIndex)
+        assertEquals("lookup:test_word", span.linkUrl)
     }
 
     @Test

@@ -563,7 +563,7 @@ class DictionaryPluginServiceTest {
 
     @Test
     fun executeCustomAction_updateResult_callsOnUpdateResult() {
-        val entry = DictionaryEntry("test", null, StyledText("test_body"))
+        val entry = DictionaryEntry("test", null, null, StyledText("test_body"))
         val mockResult = DictionaryResult(arrayOf(entry))
         val plugin = setupAndRegisterPlugin(CustomActionUpdatePlugin(mockResult))
         val latch = CountDownLatch(1)

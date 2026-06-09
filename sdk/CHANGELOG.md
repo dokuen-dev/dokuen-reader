@@ -8,8 +8,9 @@
   rules.
 - `FLAG_HEADWORD_STROKE_ORDER` constant in `DictionaryExtensions.kt` to allow plugins to request a
   stroke-order diagram presentation for the headword.
-- Added `displayFlags` parameter to the `DictionaryEntry()` Kotlin helper constructor (defaults to
-  `0`).
+- `HeadwordSpan` AIDL and class to support link annotations for character ranges within a headword.
+- `headwordSpans` property to `DictionaryEntry` AIDL to allow compound headwords to have independent
+  lookup links.
 
 ## [0.5.0]
 

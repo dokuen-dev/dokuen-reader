@@ -1,5 +1,6 @@
 package io.github.dokuendev.dokuenreader.dictionary;
 
+import io.github.dokuendev.dokuenreader.dictionary.HeadwordSpan;
 import io.github.dokuendev.dokuenreader.dictionary.RubySpan;
 import io.github.dokuendev.dokuenreader.dictionary.StyledText;
 
@@ -12,6 +13,7 @@ import io.github.dokuendev.dokuenreader.dictionary.StyledText;
  * Components:
  * - headword: The dictionary form of the word being defined (required)
  * - pronunciation: Optional ruby annotations for the headword (e.g., furigana)
+ * - headwordSpans: Optional link annotations for character ranges within the headword
  * - body: The complete definition content with formatting (required)
  * 
  * Headword Pronunciation:
@@ -22,6 +24,11 @@ import io.github.dokuendev.dokuenreader.dictionary.StyledText;
  * 
  * If the headword has no special pronunciation (e.g., kana-only words), leave
  * pronunciation null or empty.
+ * 
+ * Headword Links:
+ * The headwordSpans field annotates character ranges within the headword string
+ * with link targets, enabling individual components of a compound headword to be
+ * independently clickable. Ranges must not overlap.
  * 
  * Definition Body:
  * The body contains the full definition content as StyledText, which supports:
@@ -48,7 +55,18 @@ import io.github.dokuendev.dokuenreader.dictionary.StyledText;
  *        body = StyledText(text = "Chinese characters; kanji")
  *    )
  * 
- * 3. Entry with formatted definition:
+ * 3. Entry with headword links (compound word, each component links to its own entry):
+ *    DictionaryEntry(
+ *        headword = "日本語",
+ *        pronunciation = [RubySpan(0, 3, "にほんご")],
+ *        headwordSpans = [
+ *            HeadwordSpan(0, 2, "lookup:日本"),
+ *            HeadwordSpan(2, 3, "lookup:語")
+ *        ],
+ *        body = StyledText(text = "Japanese language")
+ *    )
+ * 
+ * 4. Entry with formatted definition:
  *    DictionaryEntry(
  *        headword = "食べる",
  *        pronunciation = [RubySpan(0, 1, "た")],
@@ -76,6 +94,18 @@ parcelable DictionaryEntry {
      * Each RubySpan pairs a character range in the headword with its reading.
      */
     @nullable RubySpan[] pronunciation;
+
+    /**
+     * Optional link annotations for character ranges within the headword.
+     * Each HeadwordSpan pairs a character range in the headword with a link target,
+     * making that range clickable in the host UI.
+     *
+     * Ranges must not overlap. Out-of-bounds spans are ignored.
+     *
+     * NOTE: HeadwordSpan only supports links. General inline styling (bold, color,
+     * font size, etc.) is not supported on headwords.
+     */
+    @nullable HeadwordSpan[] headwordSpans;
 
     /**
      * The definition body containing all senses, examples, and formatting.

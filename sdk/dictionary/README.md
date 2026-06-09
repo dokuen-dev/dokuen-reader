@@ -616,12 +616,13 @@ better ergonomics.
 
 Represents a single headword and its full definition.
 
-| Field           | Type          | Description                                                                                                                                 |
-|-----------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------------|
-| `headword`      | `String`      | The dictionary form of the word.                                                                                                            |
-| `pronunciation` | `RubySpan[]?` | Ruby annotations for the headword. Each `RubySpan` pairs a character range with its reading.                                                |
-| `body`          | `StyledText`  | The full definition content with optional formatting.                                                                                       |
-| `displayFlags`  | `Int`         | Bitmask for entry-level presentation rules. Use FLAG_HEADWORD_STROKE_ORDER to request a stroke-order diagram presentation for the headword. |
+| Field           | Type              | Description                                                                                                                                    |
+|-----------------|-------------------|------------------------------------------------------------------------------------------------------------------------------------------------|
+| `headword`      | `String`          | The dictionary form of the word.                                                                                                               |
+| `pronunciation` | `RubySpan[]?`     | Ruby annotations for the headword. Each `RubySpan` pairs a character range with its reading. Ignored when `FLAG_HEADWORD_STROKE_ORDER` is set. |
+| `headwordSpans` | `HeadwordSpan[]?` | Link annotations for the headword. Each `HeadwordSpan` makes a character range clickable. Ranges must not overlap.                             |
+| `body`          | `StyledText`      | The full definition content with optional formatting.                                                                                          |
+| `displayFlags`  | `Int`             | Bitmask for entry-level presentation rules. Use `FLAG_HEADWORD_STROKE_ORDER` to request a stroke-order diagram presentation for the headword.  |
 
 **Example:**
 
@@ -640,7 +641,18 @@ DictionaryEntry(
     )
 )
 
-// 2. Kanji Entry with stroke order diagram
+// 2. Compound headword with per-component lookup links
+DictionaryEntry(
+    headword = "日本語",
+    pronunciation = listOf(RubySpan(0, 3, "にほんご")),
+    headwordSpans = listOf(
+        HeadwordSpan(0, 2, "lookup:日本"),  // "日本" links to its own entry
+        HeadwordSpan(2, 3, "lookup:語")    // "語" links to its own entry
+    ),
+    body = StyledText(text = "Japanese language")
+)
+
+// 3. Kanji Entry with stroke order diagram
 DictionaryEntry(
     headword = "食",
     pronunciation = null,
@@ -986,6 +998,55 @@ StyledSpan(0, 10, InlineStyle(
 
 Text runs without an explicit foreground color automatically receive Dokuen's default
 contrasting color for the active theme.
+
+#### `HeadwordSpan`
+
+Makes a character range within a headword string clickable with a link target.
+`HeadwordSpan` is intentionally narrower than `StyledSpan` — headword rendering
+is controlled by the host (size, font, stroke-order mode), so general inline
+styling is not supported here.
+
+| Field        | Type     | Description                                           |
+|--------------|----------|-------------------------------------------------------|
+| `startIndex` | `Int`    | Inclusive start of the character range in `headword`. |
+| `endIndex`   | `Int`    | Exclusive end of the character range in `headword`.   |
+| `linkUrl`    | `String` | The link target. Must not be null or empty.           |
+
+Supported link formats are identical to [`InlineStyle.linkUrl`](#links-linkurl):
+
+- `"lookup:{target}"` — triggers a new lookup for the target word
+- `"action:{payload}"` — triggers `onExecuteCustomAction` with the payload
+- `"https://..."` — opens an external URL in the system browser
+
+**Constraints:**
+
+- Ranges must not overlap. If they do, behavior is undefined.
+- Out-of-bounds spans are ignored.
+
+**Example:**
+
+```kotlin
+// "AB" where "A" and "B" are separate lookup links
+DictionaryEntry(
+    headword = "AB",
+    headwordSpans = listOf(
+        HeadwordSpan(0, 1, "lookup:A"),
+        HeadwordSpan(1, 2, "lookup:B")
+    ),
+    body = StyledText(text = "...")
+)
+
+// Compound word — each kanji compound links to its own entry
+DictionaryEntry(
+    headword = "日本語",
+    pronunciation = listOf(RubySpan(0, 3, "にほんご")),
+    headwordSpans = listOf(
+        HeadwordSpan(0, 2, "lookup:日本"),
+        HeadwordSpan(2, 3, "lookup:語")
+    ),
+    body = StyledText(text = "Japanese language")
+)
+```
 
 #### `RubySpan`
 
