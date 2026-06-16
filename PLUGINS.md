@@ -9,20 +9,6 @@ expand Dokuen's capabilities, and more.
 > Dokuen's architecture sandboxes plugins to protect the main app, you should always review a
 > community plugin's source code, permissions, and metadata before installing.
 
----
-
-*The Plugins feature currently only available in the **beta version** of Dokuen Japanese Reader. To
-try it out:*
-
-* On Android:
-  Visit [Dokuen's Play Store page](https://play.google.com/store/apps/details?id=io.github.dokuendev.dokuenreader)
-  at tap "Join the beta".
-* On Web: Visit [this link](https://play.google.com/apps/testing/io.github.dokuendev.dokuenreader)
-  and click "Become a tester".
-
-**Note that the beta version may be unstable.** If you encounter any issues, please report them on
-the [GitHub issue tracker](https://github.com/dokuen-dev/dokuen-reader/issues).
-
 ## OCR Plugins
 
 | Plugin Name                                                  | Description                                       | Author        | License    | Download             |
@@ -32,9 +18,10 @@ the [GitHub issue tracker](https://github.com/dokuen-dev/dokuen-reader/issues).
 
 ## Dictionary Plugins
 
-| Plugin Name                                                        | Description                                                               | Author        | License    | Download             |
-|--------------------------------------------------------------------|---------------------------------------------------------------------------|---------------|------------|----------------------|
-| [AI Dictionary (sample)](sdk/sample-plugins/dictionary_sample_llm) | AI dictionary that generates definitions using Gemini, Claude, or ChatGPT | Dokuen Reader | Apache 2.0 | Included in base app |
+| Plugin Name                                                        | Description                                                               | Author        | License    | Download                                                                                                                 |
+|--------------------------------------------------------------------|---------------------------------------------------------------------------|---------------|------------|--------------------------------------------------------------------------------------------------------------------------|
+| [Yomitan](https://github.com/dokuen-dev/dokuen-plugin-yomitan)     | Dokuen port of the popular browser extension                              | Dokuen Reader | GPL 3.0    | [Google Play Store](https://play.google.com/store/apps/details?id=io.github.dokuendev.dokuen.plugins.dictionary.yomitan) |
+| [AI Dictionary (sample)](sdk/sample-plugins/dictionary_sample_llm) | AI dictionary that generates definitions using Gemini, Claude, or ChatGPT | Dokuen Reader | Apache 2.0 | Included in base app                                                                                                     |
 
 ## Translator Plugins
 
