@@ -11,10 +11,10 @@ expand Dokuen's capabilities, and more.
 
 ## OCR Plugins
 
-| Plugin Name                                                  | Description                                       | Author        | License    | Download             |
-|--------------------------------------------------------------|---------------------------------------------------|---------------|------------|----------------------|
-| [Google Vision BYOK](sdk/sample-plugins/ocr_sample_gcp_byok) | Google Cloud Vision OCR with 'Bring Your Own Key' | Dokuen Reader | Apache 2.0 | Included in base app |
-| [ML Kit](sdk/sample-plugins/ocr_sample_mlkit)                | Google ML Kit on-device text recognition (sample) | Dokuen Reader | Apache 2.0 | Included in base app |
+| Plugin Name                                                  | Description                                       | Author        | License    | Download                                      |
+|--------------------------------------------------------------|---------------------------------------------------|---------------|------------|-----------------------------------------------|
+| [Google Vision BYOK](sdk/sample-plugins/ocr_sample_gcp_byok) | Google Cloud Vision OCR with 'Bring Your Own Key' | Dokuen Reader | Apache 2.0 | Included in base app                          |
+| [ML Kit (sample)](sdk/sample-plugins/ocr_sample_mlkit)       | Google ML Kit on-device text recognition          | Dokuen Reader | Apache 2.0 | [GitHub](sdk/sample-plugins/ocr_sample_mlkit) |
 
 ## Dictionary Plugins
 
@@ -25,9 +25,10 @@ expand Dokuen's capabilities, and more.
 
 ## Translator Plugins
 
-| Plugin Name                                                                        | Description                                                     | Author        | License    | Download             |
-|------------------------------------------------------------------------------------|-----------------------------------------------------------------|---------------|------------|----------------------|
-| [Google Translate (sample)](sdk/sample-plugins/dictionary_sample_google_translate) | Sample translator plugin using the Google Cloud Translation API | Dokuen Reader | Apache 2.0 | Included in base app |
+| Plugin Name                                                                        | Description                                                     | Author                                  | License    | Download                                                                      |
+|------------------------------------------------------------------------------------|-----------------------------------------------------------------|-----------------------------------------|------------|-------------------------------------------------------------------------------|
+| [Google Translate web](https://github.com/Luccavco/dokuen-google-translate-plugin) | Translate via Google Translate, no API key required             | [Luccavco](https://github.com/luccavco) | Apache 2.0 | [GitHub](https://github.com/Luccavco/dokuen-google-translate-plugin/releases) |
+| [Google Translate (sample)](sdk/sample-plugins/dictionary_sample_google_translate) | Sample translator plugin using the Google Cloud Translation API | Dokuen Reader                           | Apache 2.0 | Included in base app                                                          |
 
 ## Build Your Own
 
