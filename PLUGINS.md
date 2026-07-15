@@ -21,6 +21,7 @@ expand Dokuen's capabilities, and more.
 | Plugin Name                                                        | Description                                                               | Author        | License    | Download                                                                                                                 |
 |--------------------------------------------------------------------|---------------------------------------------------------------------------|---------------|------------|--------------------------------------------------------------------------------------------------------------------------|
 | [Yomitan](https://github.com/dokuen-dev/dokuen-plugin-yomitan)     | Dokuen port of the popular browser extension                              | Dokuen Reader | GPL 3.0    | [Google Play Store](https://play.google.com/store/apps/details?id=io.github.dokuendev.dokuen.plugins.dictionary.yomitan) |
+| [JPDB](https://github.com/dokuen-dev/dokuen-plugin-jpdb)           | JPDB online dictionary and SRS integration                                | Dokuen Reader | Apache 2.0 | [Google Play Store](https://play.google.com/store/apps/details?id=io.github.dokuendev.dokuen.plugins.dictionary.jpdb)    |
 | [AI Dictionary (sample)](sdk/sample-plugins/dictionary_sample_llm) | AI dictionary that generates definitions using Gemini, Claude, or ChatGPT | Dokuen Reader | Apache 2.0 | Included in base app                                                                                                     |
 
 ## Translator Plugins
