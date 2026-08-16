@@ -68,6 +68,9 @@ Demonstrates context-aware AI dictionary lookup using LLMs.
 
 - Multi-provider support (Gemini, Claude, ChatGPT)
 - BYOK (Bring Your Own Key) model
+- Configurable model ID per provider, with an optional user override so a retired
+  or renamed model (which providers do on their own schedule) can be fixed from
+  the plugin's settings instead of requiring a new build
 - HANDLES_SEGMENTATION = true (receives full context sentence)
 - Structured Outputs for consistent JSON responses
 - Accurate furigana via bidirectional kana-stripping

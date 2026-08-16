@@ -34,11 +34,15 @@ This sample demonstrates:
 
 Choose a provider and obtain a key:
 
-| Provider | Where to get a key                                              | Default model       |
-|----------|-----------------------------------------------------------------|---------------------|
-| Gemini   | [Google AI Studio](https://aistudio.google.com/apikey)          | `gemini-2.5-flash`  |
-| Claude   | [Anthropic Console](https://console.anthropic.com/)             | `claude-3-5-sonnet` |
-| ChatGPT  | [OpenAI Platform](https://platform.openai.com/account/api-keys) | `gpt-4o-mini`       |
+| Provider | Where to get a key                                              | Default model          |
+|----------|-----------------------------------------------------------------|------------------------|
+| Gemini   | [Google AI Studio](https://aistudio.google.com/apikey)          | `gemini-flash-latest`  |
+| Claude   | [Anthropic Console](https://console.anthropic.com/)             | `claude-sonnet-4-6`    |
+| ChatGPT  | [OpenAI Platform](https://platform.openai.com/account/api-keys) | `gpt-5.1-mini`         |
+
+Providers retire model IDs on their own schedule, independent of this plugin's release cycle. If a
+default above stops working, set the `model` config field (see [Configuration](#configuration)) to the
+provider's current model ID instead.
 
 ### 2. Install the Plugin
 
@@ -96,20 +100,25 @@ The plugin reports its capabilities to Dokuen:
 
 ### Configuration
 
-The plugin declares two user-facing configuration fields via `configSchema`:
+The plugin declares three user-facing configuration fields via `configSchema`:
 
-| Field      | Type | Required | Description                              |
-|------------|------|----------|------------------------------------------|
-| `provider` | ENUM | Yes      | LLM provider: Gemini, Claude, or ChatGPT |
-| `api_key`  | TEXT | Yes      | API key for the selected provider        |
+| Field      | Type | Required | Description                                                                                           |
+|------------|------|----------|-------------------------------------------------------------------------------------------------------|
+| `provider` | ENUM | Yes      | LLM provider: Gemini, Claude, or ChatGPT                                                              |
+| `api_key`  | TEXT | Yes      | API key for the selected provider                                                                     |
+| `model`    | TEXT | No       | Optional override of the model ID for the selected provider. Leave blank to use the built-in default. |
 
-These appear as interactive controls in the Dokuen plugin settings UI.
+These appear as interactive controls in the Dokuen plugin settings UI. `model` exists specifically
+so that a provider retiring a model ID doesn't break the plugin for existing users. They can just
+update this field instead of waiting for a new release.
 
 ### Processing Flow
 
 1. **Initialization** (`onInitialize`)
     - Validates that an API key is provided
     - Reads user-selected provider from config
+    - Resolves the model ID: uses the user's `model` override if set, otherwise falls back to the
+      per-provider default in `DEFAULT_MODELS`
     - Reads host config: source language, target language, UI theme
     - Stores configuration for subsequent lookups
 
@@ -159,9 +168,9 @@ Each provider enforces this schema through its native mechanism:
 #### Gemini
 
 - **Endpoint**:
-  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`
+  `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
 - **Auth**: API key as query parameter
-- **Model**: `gemini-2.5-flash`
+- **Model**: User-configurable via the `model` config field; defaults to `gemini-flash-latest`
 - **Structured Output**: `generationConfig.responseMimeType = "application/json"` +
   `generationConfig.responseSchema`
 
@@ -169,15 +178,15 @@ Each provider enforces this schema through its native mechanism:
 
 - **Endpoint**: `https://api.openai.com/v1/chat/completions`
 - **Auth**: `Authorization: Bearer {key}`
-- **Model**: `gpt-4o-mini`
+- **Model**: User-configurable via the `model` config field; defaults to `gpt-5.1-mini`
 - **Structured Output**: `response_format.type = "json_schema"` with `strict: true`
 
 #### Claude
 
 - **Endpoint**: `https://api.anthropic.com/v1/messages`
 - **Auth**: `x-api-key: {key}` + `anthropic-version: 2023-06-01`
-- **Model**: `claude-3-5-sonnet-20241022`
-- **Structured Output**: Forced tool call — defines a `define_word` tool and sets
+- **Model**: User-configurable via the `model` config field; defaults to `claude-sonnet-4-6`
+- **Structured Output**: Forced tool call. Defines a `define_word` tool and sets
   `tool_choice = { type: "tool", name: "define_word" }`; the LLM's structured `input` JSON is
   extracted from the `tool_use` content block
 
@@ -234,12 +243,13 @@ Key methods and sections:
 
 The `executePostRequest()` method maps HTTP status codes to `DictionaryErrorCode` values:
 
-| HTTP Status | Error Code             | Meaning                                    |
-|-------------|------------------------|--------------------------------------------|
-| 401 / 403   | `AUTHENTICATION_ERROR` | Invalid API key or insufficient permission |
-| 400         | `INVALID_ARGUMENT`     | Malformed API request                      |
-| 429         | `INTERNAL_ERROR`       | Rate limit or quota exceeded               |
-| Other       | `INTERNAL_ERROR`       | Unexpected server error                    |
+| HTTP Status | Error Code             | Meaning                                             |
+|-------------|------------------------|-----------------------------------------------------|
+| 401 / 403   | `AUTHENTICATION_ERROR` | Invalid API key or insufficient permission          |
+| 400         | `INVALID_ARGUMENT`     | Malformed API request                               |
+| 404         | `INVALID_ARGUMENT`     | Model ID not found. Update the `model` config field |
+| 429         | `INTERNAL_ERROR`       | Rate limit or quota exceeded                        |
+| Other       | `INTERNAL_ERROR`       | Unexpected server error                             |
 
 ### Error card rendering
 
@@ -298,8 +308,11 @@ See each provider's pricing page for current rates.
 
 To build a production LLM dictionary plugin from this sample:
 
-1. **Change the model** — Update the model string in the API call methods (e.g., switch from
-   `gemini-2.5-flash` to `gemini-2.5-pro` for higher quality), or make it user-configurable
+1. **Auto-validate the model** — The `model` config field already covers the common case of a
+   provider retiring an ID (the user updates a setting, no rebuild needed). For a more automated
+   fix, query the provider's model-list endpoint (`GET /v1/models` for Claude and ChatGPT,
+   `GET /v1beta/models` for Gemini) in `onInitialize()` to confirm the configured model still
+   exists, and warn the user proactively instead of waiting for the next failed lookup
 2. **Customize the prompt** — Modify `getSystemPrompt()` and `getUserPrompt()` to adjust tone,
    detail level, or output structure
 3. **Add caching** — Cache responses for repeated lookups using an LRU cache or local database

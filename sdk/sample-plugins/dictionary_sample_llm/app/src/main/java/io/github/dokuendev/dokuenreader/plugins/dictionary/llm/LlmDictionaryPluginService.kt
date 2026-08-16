@@ -36,6 +36,17 @@ import java.util.Locale
  * context-aware definitions. It supports Structured Outputs to ensure responses
  * are delivered in a consistent JSON format, which are then rendered into
  * beautiful, styled dictionary entries with accurate Japanese RubySpan annotations.
+ *
+ * ## A note on model IDs
+ *
+ * LLM providers retire model IDs on their own schedule, independent of this plugin's
+ * release cycle. To avoid the plugin going silently dark whenever that happens, the
+ * model ID is a *user-configurable setting* (see [ConfigKey.MODEL]) rather than a
+ * hardcoded constant. [DEFAULT_MODELS] supplies a starting point for each provider,
+ * but those defaults WILL go stale over time -- that's expected and fine, because the
+ * user has an escape hatch (the "Model" field in plugin settings) that doesn't require
+ * waiting for an app update. See the executePostRequest() 404 handling below for how a
+ * retired model surfaces as a clear, actionable error instead of a generic one.
  */
 class LlmDictionaryPluginService : DictionaryPluginService() {
 
@@ -47,15 +58,36 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
         const val PROVIDER_GEMINI = "Gemini"
         const val PROVIDER_CLAUDE = "Claude"
         const val PROVIDER_CHATGPT = "ChatGPT"
+
+        /**
+         * Fallback model IDs, used only when the user hasn't set an override via
+         * ConfigKey.MODEL. These are current as of this writing but are NOT guaranteed
+         * to stay valid -- providers retire model IDs on their own timelines. When one
+         * breaks, the fix is to update the "Model" field in the plugin's settings, not
+         * to ship a new APK.
+         *
+         * - Gemini's "-latest" family aliases are hot-swapped by Google to the newest
+         *   release in that tier, which absorbs most routine version bumps automatically.
+         *   They can still be retired themselves, just less often than a dated snapshot.
+         * - Claude and ChatGPT model IDs here are fixed snapshots/tiers, not
+         *   auto-updating aliases, so expect to need to update these periodically.
+         */
+        private val DEFAULT_MODELS = mapOf(
+            PROVIDER_GEMINI to "gemini-flash-latest",
+            PROVIDER_CLAUDE to "claude-sonnet-4-6",
+            PROVIDER_CHATGPT to "gpt-5.1-mini"
+        )
     }
 
     private object ConfigKey {
         const val PROVIDER = "provider"
         const val API_KEY = "api_key"
+        const val MODEL = "model"
     }
 
     private var provider: String = PROVIDER_GEMINI
     private var apiKey: String? = null
+    private var model: String = ""
     private var sourceLanguage: String = "ja"
     private var targetLanguage: String = "en"
     private var isDarkTheme: Boolean = false
@@ -93,6 +125,14 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
             type = ConfigFieldType.STRING,
             defaultValue = null,
             isRequired = true
+        ),
+        ConfigField(
+            key = ConfigKey.MODEL,
+            displayName = "Model (optional override)",
+            description = "Override the model ID used for the selected provider.",
+            type = ConfigFieldType.STRING,
+            defaultValue = null,
+            isRequired = false
         )
     )
 
@@ -109,6 +149,10 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
             return InitResultFactory.failure("API key is required")
         }
 
+        model = config.getString(ConfigKey.MODEL)?.trim().takeUnless { it.isNullOrEmpty() }
+            ?: DEFAULT_MODELS[provider]
+                    ?: return InitResultFactory.failure("No default model is known for provider: $provider")
+
         // Read host configuration
         sourceLanguage = config.getString(PluginHostConfigKeys.LANGUAGE) ?: "ja"
         targetLanguage = config.getString(PluginHostConfigKeys.TARGET_LANGUAGE) ?: "en"
@@ -116,7 +160,11 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
         val themeString = config.getString(PluginHostConfigKeys.UI_THEME) ?: "light"
         isDarkTheme = (themeString == "dark")
 
-        Log.d(TAG, "Initialized: provider=$provider, source=$sourceLanguage, target=$targetLanguage, dark=$isDarkTheme")
+        Log.d(
+            TAG,
+            "Initialized: provider=$provider, model=$model, source=$sourceLanguage, " +
+                    "target=$targetLanguage, dark=$isDarkTheme"
+        )
         return InitResultFactory.success()
     }
 
@@ -153,7 +201,10 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
                 "API key is not configured"
             )
 
-            Log.d(TAG, "Looking up '$queryWord' using $provider (source=$sourceLanguage, target=$targetLanguage)")
+            Log.d(
+                TAG,
+                "Looking up '$queryWord' using $provider/$model (source=$sourceLanguage, target=$targetLanguage)"
+            )
 
             val jsonResponse = try {
                 when (provider) {
@@ -165,7 +216,7 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
                         "Unsupported provider: $provider"
                     )
                 }
-            } catch (e: SocketTimeoutException) {
+            } catch (_: SocketTimeoutException) {
                 throw DictionaryException(DictionaryErrorCode.NETWORK_ERROR, "Request timed out")
             } catch (e: IOException) {
                 throw DictionaryException(DictionaryErrorCode.NETWORK_ERROR, "Network error: ${e.message}")
@@ -238,6 +289,18 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
 
         // 3. Recommendation Block - Actionable recommendations based on error type
         val suggestion = when {
+            // Checked before the generic AUTHENTICATION_ERROR/INVALID_ARGUMENT branches below,
+            // since a retired/unknown model ID is a much more specific (and more common, over
+            // time) failure than a bad key or a malformed request.
+            errorMessage.contains("no longer available", ignoreCase = true) ||
+                    errorMessage.contains("model", ignoreCase = true) &&
+                    (errorMessage.contains("not found", ignoreCase = true) ||
+                            errorMessage.contains("does not exist", ignoreCase = true) ||
+                            errorMessage.contains("retired", ignoreCase = true)) -> {
+                "The configured model ('$model') may have been retired by $provider. Open the plugin's " +
+                        "settings, check $provider's current model list, and update the \"Model\" field."
+            }
+
             error is DictionaryException && error.errorCode == DictionaryErrorCode.AUTHENTICATION_ERROR -> {
                 "Please verify your API key in the plugin configuration settings and ensure it has correct permissions."
             }
@@ -292,7 +355,7 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
         val metaStart = bodyBuilder.length
         val srcName = getLanguageName(sourceLanguage)
         val tgtName = getLanguageName(targetLanguage)
-        val metaText = "Model: $provider • Source: $srcName → Target: $tgtName • Error Report"
+        val metaText = "Model: $provider/$model • Source: $srcName → Target: $tgtName • Error Report"
         bodyBuilder.append(metaText)
         val metaEnd = bodyBuilder.length
 
@@ -411,7 +474,7 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
         key: String
     ): String {
         val url =
-            URL("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$key")
+            URL("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$key")
 
         val systemInstructionText = getSystemPrompt("Respond ONLY in the requested JSON schema.")
         val userPrompt = getUserPrompt(query, context, cursorStartIndex, cursorEndIndex)
@@ -476,7 +539,7 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
         val userPrompt = getUserPrompt(query, context, cursorStartIndex, cursorEndIndex)
 
         val requestBody = JSONObject().apply {
-            put("model", "gpt-4o-mini")
+            put("model", model)
             put("messages", JSONArray().apply {
                 put(JSONObject().apply {
                     put("role", "system")
@@ -537,7 +600,7 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
         val userPrompt = getUserPrompt(query, context, cursorStartIndex, cursorEndIndex)
 
         val requestBody = JSONObject().apply {
-            put("model", "claude-3-5-sonnet-20241022")
+            put("model", model)
             put("max_tokens", 2048)
             put("system", systemPrompt)
             put("messages", JSONArray().apply {
@@ -630,7 +693,7 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
             } else {
                 val errorBody = try {
                     InputStreamReader(connection.errorStream, Charsets.UTF_8).use { it.readText() }
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     "Unable to read error response"
                 }
 
@@ -646,6 +709,21 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
                         DictionaryException(
                             DictionaryErrorCode.INVALID_ARGUMENT,
                             "Invalid API request argument"
+                        )
+                    }
+
+                    HttpURLConnection.HTTP_NOT_FOUND -> {
+                        // All three providers return 404 for an unknown/retired model ID
+                        // (as opposed to a bad endpoint path, which would be a bug in this
+                        // plugin rather than a stale config value). Surface this distinctly
+                        // from a generic INTERNAL_ERROR so createErrorEntry() can point the
+                        // user straight at the "Model" config field instead of a vague
+                        // "check your settings" message.
+                        DictionaryException(
+                            DictionaryErrorCode.INVALID_ARGUMENT,
+                            "Model '$model' is not available from $provider (HTTP 404). It may have been " +
+                                    "retired -- check $provider's current model list and update the Model field " +
+                                    "in the plugin's settings. Raw response: $errorBody"
                         )
                     }
 
@@ -831,7 +909,7 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
             val metaStart = bodyBuilder.length
             val srcName = getLanguageName(sourceLanguage)
             val tgtName = getLanguageName(targetLanguage)
-            val metaText = "Model: $provider • Source: $srcName → Target: $tgtName • Context-aware definition"
+            val metaText = "Model: $provider/$model • Source: $srcName → Target: $tgtName • Context-aware definition"
             bodyBuilder.append(metaText)
             val noteStr = "\n\nThis is a sample Dokuen dictionary plugin. " +
                     "To customize the LLM prompt, tweak the output formatting, or remove this message, " +
@@ -864,7 +942,7 @@ class LlmDictionaryPluginService : DictionaryPluginService() {
     }
 
     /**
-     * Highly accurate bi-directional alignment algorithm to create perfect RubySpan furigana readings.
+     * Highly accurate bidirectional alignment algorithm to create perfect RubySpan furigana readings.
      * Extracts common prefix kana, then common suffix kana, and maps reading to the remaining middle kanji.
      */
     private fun buildRubySpans(headword: String, reading: String): List<RubySpan> {
