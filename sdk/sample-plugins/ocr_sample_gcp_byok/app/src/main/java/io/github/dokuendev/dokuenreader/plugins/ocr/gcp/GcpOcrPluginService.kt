@@ -33,18 +33,20 @@ class GcpOcrPluginService : OcrPluginService() {
     private var apiKey: String? = null
     private var language: String? = null
     private var useDocumentTextDetection: Boolean = true
+    private var forceRtlVerticalText: Boolean = true
     private val textDirectionDetector = TextDirectionDetector()
 
     /**
      * Intermediate representation of a parsed OCR block, before text direction is resolved.
      *
-     * @param text The concatenated text content of the block.
-     * @param symbolBounds Normalized bounding rectangles for each symbol in the block.
+     * @param symbols The block's symbols in GCP's original order: each entry is one GCP
+     *   "symbol"'s text fragment (almost always a single character) paired with its normalized
+     *   bounding box. Kept ungrouped (not concatenated into a string yet, not grouped by word)
+     *   so that [VerticalColumnReorderer] can operate on raw geometry once orientation is known.
      * @param blockData Structural data used by [TextDirectionDetector] when direction is AUTO.
      */
     private data class ParsedBlock(
-        val text: String,
-        val symbolBounds: List<RectF>,
+        val symbols: List<Pair<String, RectF>>,
         val blockData: TextDirectionDetector.BlockData,
     )
 
@@ -73,6 +75,14 @@ class GcpOcrPluginService : OcrPluginService() {
             defaultValue = "DOCUMENT_TEXT_DETECTION",
             isRequired = false,
             enumValues = listOf("TEXT_DETECTION", "DOCUMENT_TEXT_DETECTION")
+        ),
+        ConfigField(
+            key = ConfigKey.FORCE_RTL_VERTICAL,
+            displayName = "Force right-to-left order for vertical text",
+            description = "GCP sometimes gets column order wrong on images with mixed horizontal/vertical text.",
+            type = ConfigFieldType.BOOLEAN,
+            defaultValue = "true",
+            isRequired = false
         )
     )
 
@@ -92,6 +102,8 @@ class GcpOcrPluginService : OcrPluginService() {
         // Read user config; default to DOCUMENT_TEXT_DETECTION if the user didn't set it.
         val detectionMode = config.getString(ConfigKey.DETECTION_MODE) ?: "DOCUMENT_TEXT_DETECTION"
         useDocumentTextDetection = detectionMode == "DOCUMENT_TEXT_DETECTION"
+
+        forceRtlVerticalText = (config.getString(ConfigKey.FORCE_RTL_VERTICAL) ?: "true") == "true"
 
         val requirements = Bundle().apply {
             putBoolean(OcrRequirementKeys.CONVERT_TO_GRAYSCALE, true)
@@ -144,6 +156,7 @@ class GcpOcrPluginService : OcrPluginService() {
         apiKey = null
         language = null
         useDocumentTextDetection = true
+        forceRtlVerticalText = true
     }
 
     // -------------------------------------------------------------------------
@@ -263,8 +276,9 @@ class GcpOcrPluginService : OcrPluginService() {
             throw GcpApiException(OcrErrorCode.INTERNAL_ERROR, errMsg)
         }
 
-        val page = response0
-            .optJSONObject("fullTextAnnotation")
+        val fullTextAnnotation = response0.optJSONObject("fullTextAnnotation")
+
+        val page = fullTextAnnotation
             ?.optJSONArray("pages")
             ?.optJSONObject(0)
             ?: return emptyList()
@@ -298,8 +312,10 @@ class GcpOcrPluginService : OcrPluginService() {
 
         for (i in 0 until blocksArray.length()) {
             val block = blocksArray.optJSONObject(i) ?: continue
-            val blockText = StringBuilder()
-            val symbolBounds = mutableListOf<RectF>()
+            // Flat, ungrouped symbol list in GCP's original order. One entry per GCP "symbol"
+            // (its text fragment, almost always one character, paired with its bounding box).
+            // This is what VerticalColumnReorderer operates on later, once orientation is known.
+            val blockSymbols = mutableListOf<Pair<String, RectF>>()
             val blockData = TextDirectionDetector.BlockData()
 
             val paragraphs = block.optJSONArray("paragraphs") ?: continue
@@ -323,14 +339,13 @@ class GcpOcrPluginService : OcrPluginService() {
                         val rect = boundingBoxToRectF(symbol.optJSONObject("boundingBox"), normX, normY)
                         if (!rect.isEmpty) {
                             wordText.append(text)
-                            symbolBounds.add(rect)
+                            blockSymbols.add(Pair(text, rect))
                             symbolBoundsForWord.add(rect)
                         }
                     }
 
                     val finalWordText = wordText.toString()
                     if (finalWordText.isNotEmpty()) {
-                        blockText.append(finalWordText)
                         wordData.add(
                             TextDirectionDetector.WordData(
                                 finalWordText,
@@ -345,9 +360,8 @@ class GcpOcrPluginService : OcrPluginService() {
                 }
             }
 
-            val finalText = blockText.toString().trim()
-            if (finalText.isNotEmpty()) {
-                parsedBlocks.add(ParsedBlock(finalText, symbolBounds, blockData))
+            if (blockSymbols.isNotEmpty()) {
+                parsedBlocks.add(ParsedBlock(blockSymbols, blockData))
             }
         }
         return parsedBlocks
@@ -405,6 +419,10 @@ class GcpOcrPluginService : OcrPluginService() {
      * - **Second pass**: any block that remained [TextDirection.NOT_SET] after the first pass
      *   is resolved by adopting the orientation of its neighbors when they agree, falling back
      *   to [TextDirection.HORIZONTAL] otherwise.
+     *
+     * Blocks resolved as vertical are then, when [forceRtlVerticalText] is enabled, run through
+     * [VerticalColumnReorderer] to correct GCP's column order if (and only if) it shows strong
+     * evidence of the reversed-columns failure mode; see that class for details.
      */
     private fun resolveTextDirections(parsedBlocks: List<ParsedBlock>, textDirection: TextDirection): List<OcrBlock> {
         // First pass: determine an initial orientation for every block
@@ -439,14 +457,36 @@ class GcpOcrPluginService : OcrPluginService() {
             }
 
             val block = parsedBlocks[i]
+            val isVertical = finalOrientation == TextDirection.VERTICAL
+
+            val orderedSymbols = if (isVertical && forceRtlVerticalText) {
+                VerticalColumnReorderer.reorderIfNeeded(block.symbols)
+            } else {
+                block.symbols
+            }
+            val trimmedSymbols = trimWhitespaceEnds(orderedSymbols)
+
             OcrBlock(
-                block.text,
-                block.symbolBounds,
-                isVertical = (finalOrientation == TextDirection.VERTICAL)
+                trimmedSymbols.joinToString("") { it.first },
+                trimmedSymbols.map { it.second },
+                isVertical = isVertical
             )
         }
 
         return ocrBlocks
+    }
+
+    /**
+     * Trims leading/trailing whitespace-only symbols, mirroring the trimming this method used to
+     * apply to the assembled block string directly, back when text and bounds were built as
+     * separate parallel lists instead of paired symbol entries.
+     */
+    private fun trimWhitespaceEnds(symbols: List<Pair<String, RectF>>): List<Pair<String, RectF>> {
+        var start = 0
+        var end = symbols.size
+        while (start < end && symbols[start].first.isBlank()) start++
+        while (end > start && symbols[end - 1].first.isBlank()) end--
+        return symbols.subList(start, end)
     }
 
     // -------------------------------------------------------------------------
@@ -459,6 +499,7 @@ class GcpOcrPluginService : OcrPluginService() {
     private object ConfigKey {
         const val API_KEY = "api_key"
         const val DETECTION_MODE = "detection_mode"
+        const val FORCE_RTL_VERTICAL = "force_rtl_vertical"
     }
 
     /** Wraps a GCP API error with a mapped [OcrErrorCode] for structured propagation. */

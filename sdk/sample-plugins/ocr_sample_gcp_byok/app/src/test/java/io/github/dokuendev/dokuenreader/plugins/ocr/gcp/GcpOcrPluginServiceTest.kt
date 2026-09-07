@@ -50,7 +50,7 @@ class GcpOcrPluginServiceTest {
     fun configSchema_hasRequiredFields() {
         val schema = service.configSchema
 
-        assertEquals("Should have 2 config fields", 2, schema.size)
+        assertEquals("Should have 3 config fields", 3, schema.size)
 
         val apiKeyField = schema.find { it.key == "api_key" }
         assertNotNull("Should have api_key field", apiKeyField)
@@ -72,6 +72,16 @@ class GcpOcrPluginServiceTest {
             "DOCUMENT_TEXT_DETECTION",
             detectionModeField.defaultValue
         )
+
+        val forceRtlVerticalField = schema.find { it.key == "force_rtl_vertical" }
+        assertNotNull("Should have force_rtl_vertical field", forceRtlVerticalField)
+        assertEquals(
+            "Force RTL vertical should be BOOLEAN type",
+            ConfigFieldType.BOOLEAN,
+            forceRtlVerticalField!!.type
+        )
+        assertFalse("Force RTL vertical should be optional", forceRtlVerticalField.isRequired)
+        assertEquals("Default should be true", "true", forceRtlVerticalField.defaultValue)
     }
 
     // -------------------------------------------------------------------------
