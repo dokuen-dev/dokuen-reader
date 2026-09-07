@@ -33,16 +33,19 @@ class GcpOcrPluginService : OcrPluginService() {
     private var apiKey: String? = null
     private var language: String? = null
     private var useDocumentTextDetection: Boolean = true
+    private val textDirectionDetector = TextDirectionDetector()
 
     /**
      * Intermediate representation of a parsed OCR block, before text direction is resolved.
      *
      * @param text The concatenated text content of the block.
      * @param symbolBounds Normalized bounding rectangles for each symbol in the block.
+     * @param blockData Structural data used by [TextDirectionDetector] when direction is AUTO.
      */
     private data class ParsedBlock(
         val text: String,
         val symbolBounds: List<RectF>,
+        val blockData: TextDirectionDetector.BlockData,
     )
 
     override val capabilities = Bundle().apply {
@@ -273,7 +276,7 @@ class GcpOcrPluginService : OcrPluginService() {
         val normY = 1.0f / pageHeight
 
         val parsedBlocks = parseBlocks(page.optJSONArray("blocks"), normX, normY)
-        return resolveTextDirections(parsedBlocks, textDirection)
+        return resolveTextDirections(parsedBlocks, TextDirection.fromString(textDirection))
     }
 
     /**
@@ -297,17 +300,22 @@ class GcpOcrPluginService : OcrPluginService() {
             val block = blocksArray.optJSONObject(i) ?: continue
             val blockText = StringBuilder()
             val symbolBounds = mutableListOf<RectF>()
+            val blockData = TextDirectionDetector.BlockData()
 
             val paragraphs = block.optJSONArray("paragraphs") ?: continue
             for (j in 0 until paragraphs.length()) {
                 val paragraph = paragraphs.optJSONObject(j) ?: continue
+                val paragraphBounds = boundingBoxToRectF(paragraph.optJSONObject("boundingBox"), normX, normY)
                 val words = paragraph.optJSONArray("words") ?: continue
+                val wordData = mutableListOf<TextDirectionDetector.WordData>()
 
                 for (k in 0 until words.length()) {
                     val word = words.optJSONObject(k) ?: continue
                     val wordText = StringBuilder()
+                    val wordBounds = boundingBoxToRectF(word.optJSONObject("boundingBox"), normX, normY)
                     val symbols = word.optJSONArray("symbols") ?: continue
 
+                    val symbolBoundsForWord = mutableListOf<RectF>()
                     for (l in 0 until symbols.length()) {
                         val symbol = symbols.optJSONObject(l) ?: continue
                         val text = symbol.optString("text")
@@ -316,16 +324,30 @@ class GcpOcrPluginService : OcrPluginService() {
                         if (!rect.isEmpty) {
                             wordText.append(text)
                             symbolBounds.add(rect)
+                            symbolBoundsForWord.add(rect)
                         }
                     }
 
-                    if (wordText.isNotEmpty()) blockText.append(wordText)
+                    val finalWordText = wordText.toString()
+                    if (finalWordText.isNotEmpty()) {
+                        blockText.append(finalWordText)
+                        wordData.add(
+                            TextDirectionDetector.WordData(
+                                finalWordText,
+                                wordBounds,
+                                symbolBoundsForWord
+                            )
+                        )
+                    }
+                }
+                if (wordData.isNotEmpty()) {
+                    blockData.paragraphs.add(TextDirectionDetector.ParagraphData(paragraphBounds, wordData))
                 }
             }
 
             val finalText = blockText.toString().trim()
             if (finalText.isNotEmpty()) {
-                parsedBlocks.add(ParsedBlock(finalText, symbolBounds))
+                parsedBlocks.add(ParsedBlock(finalText, symbolBounds, blockData))
             }
         }
         return parsedBlocks
@@ -373,97 +395,58 @@ class GcpOcrPluginService : OcrPluginService() {
     // -------------------------------------------------------------------------
 
     /**
-     * The orientation of a single parsed block, as determined geometrically or assigned
-     * from the caller's explicit request.
+     * Resolves the text direction for each [ParsedBlock] and produces the final list of [OcrBlock].
+     *
+     * Direction is determined in two passes:
+     *
+     * - **First pass**: each block gets an initial direction by delegating to
+     *   [TextDirectionDetector] (when [textDirection] is AUTO) or by using the fixed
+     *   [textDirection] value directly.
+     * - **Second pass**: any block that remained [TextDirection.NOT_SET] after the first pass
+     *   is resolved by adopting the orientation of its neighbors when they agree, falling back
+     *   to [TextDirection.HORIZONTAL] otherwise.
      */
-    private enum class BlockOrientation { HORIZONTAL, VERTICAL, INCONCLUSIVE }
-
-    /**
-     * Assigns a text direction to each [ParsedBlock] and returns the final list of [OcrBlock].
-     *
-     * When a fixed direction is requested ("horizontal" or "vertical"), it is applied uniformly
-     * to all blocks with no detection or resolution step.
-     *
-     * If textDirection is "auto", we determine the orientation of each block based on the geometric
-     * order of the symbols as returned by the Vision API. I.e. if the symbols are ordered
-     * left-to-right then the block is horizontal, and if the symbols are ordered top-to-bottom then
-     * the block is vertical.
-     *
-     * However, some blocks will be ambiguous, such as blocks with only one character. For those
-     * cases we run a second pass to heuristically determine the orientation based on broader context.
-     *
-     * - **First pass** - each block gets an initial orientation via [detectOrientation]; ambiguous
-     *   blocks yield [BlockOrientation.INCONCLUSIVE].
-     * - **Second pass** - INCONCLUSIVE blocks are resolved by adopting their neighbors' orientation
-     *   when both agree, falling back to horizontal otherwise.
-     */
-    private fun resolveTextDirections(parsedBlocks: List<ParsedBlock>, textDirection: String?): List<OcrBlock> {
-        val fixedDirection = when (textDirection?.lowercase()) {
-            "horizontal" -> BlockOrientation.HORIZONTAL
-            "vertical" -> BlockOrientation.VERTICAL
-            else -> null // AUTO
-        }
-
-        if (fixedDirection == BlockOrientation.HORIZONTAL || fixedDirection == BlockOrientation.VERTICAL) {
-            return parsedBlocks.map { block ->
-                OcrBlock(block.text, block.symbolBounds, isVertical = fixedDirection == BlockOrientation.VERTICAL)
+    private fun resolveTextDirections(parsedBlocks: List<ParsedBlock>, textDirection: TextDirection): List<OcrBlock> {
+        // First pass: determine an initial orientation for every block
+        val initialOrientations = parsedBlocks.map { block ->
+            when (textDirection) {
+                TextDirection.AUTO -> textDirectionDetector.detectBlockOrientation(block.blockData)
+                else -> textDirection
             }
         }
 
-        // Auto path: detect orientation per block, then resolve inconclusive blocks.
-
-        // First pass: detect an initial orientation for every block.
-        val initialOrientations: List<BlockOrientation> = parsedBlocks.map { block ->
-            detectOrientation(block.symbolBounds)
-        }
-
-        // Second pass: resolve INCONCLUSIVE blocks via neighbor consensus.
-        val ocrBlocks = initialOrientations.mapIndexed { i, orientation ->
-            val resolvedOrientation = if (orientation != BlockOrientation.INCONCLUSIVE) {
-                orientation
+        // Second pass: resolve any inconclusive orientations using neighbor consensus
+        val ocrBlocks = initialOrientations.mapIndexed { i, initialOrientation ->
+            val finalOrientation = if (initialOrientation != TextDirection.NOT_SET) {
+                initialOrientation
             } else {
-                val prev = if (i > 0) initialOrientations[i - 1] else BlockOrientation.INCONCLUSIVE
-                val next =
-                    if (i < initialOrientations.size - 1) initialOrientations[i + 1] else BlockOrientation.INCONCLUSIVE
-                val resolved = when {
-                    prev == next && prev != BlockOrientation.INCONCLUSIVE -> prev
-                    else -> BlockOrientation.HORIZONTAL // fallback
+                val prevOrientation = if (i > 0) initialOrientations[i - 1] else TextDirection.NOT_SET
+                val nextOrientation =
+                    if (i < initialOrientations.size - 1) initialOrientations[i + 1] else TextDirection.NOT_SET
+
+                // If neighbors agree and are conclusive, adopt their orientation
+                val resolved = when (prevOrientation) {
+                    TextDirection.VERTICAL if nextOrientation == TextDirection.VERTICAL -> TextDirection.VERTICAL
+                    TextDirection.HORIZONTAL if nextOrientation == TextDirection.HORIZONTAL -> TextDirection.HORIZONTAL
+                    // Final fallback
+                    else -> TextDirection.HORIZONTAL
                 }
-                Log.d(TAG, "Block $i was INCONCLUSIVE. Resolved to $resolved (neighbors: $prev, $next)")
+                Log.d(
+                    TAG,
+                    "Block $i was INCONCLUSIVE. Resolved to $resolved based on neighbors ($prevOrientation, $nextOrientation)"
+                )
                 resolved
             }
+
+            val block = parsedBlocks[i]
             OcrBlock(
-                parsedBlocks[i].text,
-                parsedBlocks[i].symbolBounds,
-                isVertical = resolvedOrientation == BlockOrientation.VERTICAL
+                block.text,
+                block.symbolBounds,
+                isVertical = (finalOrientation == TextDirection.VERTICAL)
             )
         }
 
         return ocrBlocks
-    }
-
-    /**
-     * Heuristically determines the orientation of a block's symbols. This assumes the Vision API has
-     * already correctly detected the orientation and returned the symbols in left-to-right order for
-     * horizontal text and top-to-bottom/right-to-left order for vertical text.
-     *
-     * Compares the span of symbol centers along each axis. Returns [BlockOrientation.INCONCLUSIVE]
-     * when the evidence is ambiguous (too few symbols, or a near-square arrangement).
-     */
-    private fun detectOrientation(symbolBounds: List<RectF>): BlockOrientation {
-        if (symbolBounds.size < 2) return BlockOrientation.INCONCLUSIVE
-
-        val xSpan = symbolBounds.maxOf { it.centerX() } - symbolBounds.minOf { it.centerX() }
-        val ySpan = symbolBounds.maxOf { it.centerY() } - symbolBounds.minOf { it.centerY() }
-
-        val total = xSpan + ySpan
-        if (total < 0.01f) return BlockOrientation.INCONCLUSIVE // symbols overlapping, indeterminate
-
-        return when {
-            ySpan / total > 0.65f -> BlockOrientation.VERTICAL
-            xSpan / total > 0.65f -> BlockOrientation.HORIZONTAL
-            else -> BlockOrientation.INCONCLUSIVE
-        }
     }
 
     // -------------------------------------------------------------------------
