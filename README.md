@@ -1,67 +1,81 @@
 # Dokuen Japanese Reader
 
-**The all-in-one Japanese reading companion for Android.**
+**Universal furigana overlay, camera OCR, and immersion reading companion for Android.**
+
+<p><kbd><img src="https://github.com/user-attachments/assets/bd93374c-3a36-4682-b6f5-af1ab674a598" width="250"></kbd>&nbsp;&nbsp;&nbsp;&nbsp;<kbd><img src="https://github.com/user-attachments/assets/1b861875-fb90-4a27-8717-f9e52919f89a" width="250"></kbd>&nbsp;&nbsp;&nbsp;&nbsp;<kbd><img src="https://github.com/user-attachments/assets/206a5bca-fa66-4ec5-b416-25f19a7d8d10" width="250"></kbd></p>
 
 ## What is Dokuen?
 
-**Dokuen Japanese Reader** (formerly *Dokuen Furigana Reader*) is an advanced Japanese reader and study tool for Android. It provides a non-intrusive furigana overlay that works across almost any Android app—whether you are reading manga, browsing news, playing video games, or watching videos with subtitles.
+**Dokuen Japanese Reader** (formerly *Dokuen Furigana Reader*) is an advanced Japanese reading and study companion for Android. Instead of interrupting your immersion by switching between apps and dictionaries, Dokuen overlays furigana (phonetic readings) and a one-tap dictionary directly on top of Japanese text across any Android app, from manga and raw visual novels to video subtitles and web browsers.
 
-Instead of switching back and forth between a reader and a dictionary, Dokuen brings the information to you, in-place and in real-time.
+Designed specifically for active immersion learners and sentence miners, Dokuen features a modular architecture that lets you tailor your OCR engines, dictionaries, and SRS workflows to your exact study routine.
 
 ### Key Features
 
-* **System-wide Overlay:** Get furigana on top of kanji in any app without leaving your current screen.
-* **Camera Mode:** Point your phone at physical books, manga, signs, or menus to see furigana instantly.
-* **Integrated Dictionary:** Tap any word to see definitions, readings, and more.
-* **Anki Integration:** Send new vocabulary directly to your Anki decks with a single tap.
-* **Video Support:** Smart auto-pause feature for looking up subtitles on streaming services like Netflix or YouTube.
+* **System-wide Overlay:** Render furigana on top of kanji in any app, across games, browsers, manga apps, and media players without leaving your current screen.
+* **Camera Mode:** Point your phone at physical manga volumes, books, street signs, packaging, or restaurant menus to see furigana appear directly over print.
+* **Tap-to-Define Lookups:** Tap any word to view definitions, readings, and more.
+* **Comprehension Helper:** Drag-select full sentences or tricky clauses to generate quick structural aids and contextual translations.
+* **Anki Integration:** Send target words, context sentences, and readings directly to your Anki decks with a single tap.
+* **Modular OCR Engine Plugins:** Choose the text recognition engine that fits your hardware and privacy needs. Run fast, lightweight local engines or high-accuracy cloud models.
+* **Custom Dictionary Plugins:** Connect your preferred dictionary ecosystems, with ready-to-use Yomitan and JPDB plugins or custom community plugins.
+* **Quick-Action Shortcuts & Scripting:** Trigger custom URL schemes, launch external dictionary apps, or write simple action scripts to bridge Dokuen directly into your study pipeline.
+* **Subtitles & Video Support:** Smart auto-pause feature allows you to inspect subtitles on streaming platforms like Netflix without breaking playback flow.
 
 ## Download
 
-Download Dokuen Japanese Reader from the [Google Play Store](https://play.google.com/store/apps/details?id=io.github.dokuendev.dokuenreader).
+Get Dokuen Japanese Reader on the [Google Play Store](https://play.google.com/store/apps/details?id=io.github.dokuendev.dokuenreader).
+
+## Plugins & Integrations
+
+Dokuen is built from the ground up to be extensible:
+* **OCR Engines:** Switch between high-accuracy cloud recognition (e.g., Google Cloud Vision) and local, on-device offline models.
+* **Dictionaries:** Connect pre-built plugins such as Yomitan or JPDB, or configure custom dictionaries.
+* **External Tools:** Set up quick actions to pass terms directly into third-party apps or custom SRS setups.
+
+For documentation on installing plugins or building your own, see the [Plugins Guide](PLUGINS.md).
 
 ## FAQ
 
 **Q: Why do I see a "recording" icon and timer in my status bar?**
 
-* Dokuen uses the Android Media Projection API to read the text on your screen. Android displays this icon/timer whenever the service is active to ensure transparency. However, **Dokuen does not record video.** It only captures a single still frame of your screen the moment you tap the floating button to process the text.
+* Dokuen uses Android’s standard Media Projection API to inspect the text on your screen. Android displays this status bar indicator whenever the capture permission is granted. **Dokuen does not record video.** It captures a single still frame only when you tap the scan button to process visible text.
 
-**Q: Does Dokuen send my data to a server?**
+**Q: Does Dokuen send my screen data to external servers?**
 
-* **Standard Mode:** All OCR processing and dictionary lookups happen locally on your device. No data leaves your device.
-* **Cloud Scan Mode:** If you select Cloud Scan Mode, the captured image is sent to the **Google Cloud Vision API** for processing. These images are processed in real-time and **deleted immediately** after the text is extracted. I don’t store your images or reading history.
+* **Local Engines:** When using local OCR plugins and the offline built-in dictionary, all processing occurs entirely on your device. No data leaves your phone.
+* **Cloud OCR Plugins:** If you enable a cloud-based engine (such as Google Cloud Vision), the captured frame is sent securely to extract text. Images are processed in real-time and **deleted immediately** following text recognition. Dokuen does not store your captures or reading history.
 
-**Q: Why does the OCR sometimes mis-identify words?**
+**Q: Why does the OCR occasionally misidentify characters?**
 
-* On-device OCR can struggle with stylized fonts and complex backgrounds. **Cloud Scan Mode** uses a significantly more powerful engine and is recommended for difficult manga layouts or complex fonts.
+* Highly stylized display typography, complex manga sound effects (onomatopoeia), or textured backgrounds can sometimes trip up lightweight on-device models. For difficult manga layouts or stylized fonts, switch to a cloud-based OCR plugin for significantly higher recognition accuracy.
 
-**Q: Is there an iOS version?**
+**Q: Does Dokuen support vertical text (縦書き)?**
 
-* Currently, Dokuen is only available for Android due to the system-level overlay permissions required. iOS doesn’t allow apps to draw over other applications in this way.
+* Yes. Dokuen handles both horizontal and vertical Japanese text layouts. Depending on your active OCR engine, you can toggle text direction in settings, while advanced cloud plugins automatically detect and parse mixed orientations in a single frame.
 
-**Q: Does it work with vertical text (縦書き)?**
+**Q: Can I use Yomitan, JPDB, or other dictionary systems?**
 
-* Yes, Dokuen fully supports both horizontal and vertical Japanese text layouts. Depending on the selected Scan Mode, you may need to **manually select the text direction** (Horizontal or Vertical) in settings before tapping the Start button. More advanced OCR engines, such as the built-in **Cloud Scan Mode** and some third-party plugins, can auto-detect the direction and even support mixed horizontal and vertical text in the same image.
+* Yes. Dokuen supports custom dictionary plugins (including official plugins for Yomitan and JPDB available on Google Play) as well as configurable quick-action shortcuts. Check out the [Plugins Guide](PLUGINS.md) for setup details.
 
-**Q: Can I use [Insert favorite OCR Engine Here] instead?**
+**Q: Is there an iOS version available?**
 
-* Yes! Dokuen is built to be extensible, and you can use any OCR engine you want. Check out the [plugins page](PLUGINS.md) for more information.
+* No. Dokuen requires Android’s system-level overlay and media projection permissions to draw interactive furigana over third-party apps. iOS does not allow background applications to inspect or draw across other running apps in this manner.
 
 ## Bug Reports & Feedback
 
-This repository is the central hub for Dokuen users to report issues and suggest new features. 
+This repository tracks bug reports, integration improvements, and feature discussions.
 
 ### How to Report a Bug
 
-Before filing a new report, please check the **[Issues](../../issues)** tab to see if the problem has already been reported. If not, feel free to open a new issue.
-
-To help us fix the problem faster, please include the following in your report:
-
-1. **Device Model:** (e.g., Pixel 7, Samsung S23)
-2. **Android Version:** (e.g., Android 13, 14)
-3. **App Involved:** If the overlay isn’t working on a specific app (e.g., Kindle, X, Chrome), please specify which one.
-4. **Steps to Reproduce:** What were you doing when the bug occurred?
-5. **Screenshots:** Visuals are extremely helpful for UI or OCR issues.
+1. Check the **[Issues](../../issues)** tab to confirm the issue has not already been submitted.
+2. If opening a new issue, include:
+   * **Device Model:** (e.g., Pixel 8, Galaxy S24)
+   * **Android Version:** (e.g., Android 14, 15)
+   * **Active Plugins:** Specified OCR engine and dictionary plugins in use.
+   * **Target App:** The specific app where the issue occurred (e.g., Kindle, Chrome, specific game/reader).
+   * **Steps to Reproduce:** Exact steps that lead to the error.
+   * **Screenshots/Logs:** Highly recommended for layout alignment or OCR misidentification reports.
 
 ### Feature Requests
 
@@ -72,4 +86,4 @@ Have an idea for a new feature? I’d love to hear it. Please open an issue and 
 ## Support & Links
 
 * **Privacy Policy:** [https://dokuen-dev.github.io/furigana-reader/privacy/](https://dokuen-dev.github.io/furigana-reader/privacy/)
-* **Email Support:** [dokuen.reader@gmail.com](mailto:dokuen.reader@gmail.com)
+* **Support Email:** [dokuen.reader@gmail.com](mailto:dokuen.reader@gmail.com)
