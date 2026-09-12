@@ -1,6 +1,8 @@
 # Dokuen Japanese Reader
 
-**The all-in-one Japanese reading companion for Android.**
+**Universal furigana overlay and all-in-one Japanese reading companion for Android.**
+
+<p><kbd><img src="https://github.com/user-attachments/assets/f54618bf-c53c-40d5-9ee8-bb87a4f9c21d" width="250"></kbd>&nbsp;&nbsp;&nbsp;&nbsp;<kbd><img src="https://github.com/user-attachments/assets/1b861875-fb90-4a27-8717-f9e52919f89a" width="250"></kbd>&nbsp;&nbsp;&nbsp;&nbsp;<kbd><img src="https://github.com/user-attachments/assets/206a5bca-fa66-4ec5-b416-25f19a7d8d10" width="250"></kbd></p>
 
 ## What is Dokuen?
 
