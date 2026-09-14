@@ -35,6 +35,8 @@ Dokuen is built from the ground up to be extensible:
 
 For documentation on installing plugins or building your own, see the [Plugins Guide](PLUGINS.md).
 
+To explore or customize quick actions, see [Dictionary Extensions](EXTENSIONS.md).
+
 ## FAQ
 
 **Q: Why do I see a "recording" icon and timer in my status bar?**

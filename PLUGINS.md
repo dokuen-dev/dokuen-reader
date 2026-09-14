@@ -37,3 +37,8 @@ Don't see the plugin you want? If you're a developer and want to create a new pl
 listed here, check out the [Plugin SDK documentation](sdk/README.md) to get started.
 
 Once your plugin is published, you can submit it to be featured in this directory.
+
+## See also
+
+[Dictionary Extensions](EXTENSIONS.md) - For setting up quick-action buttons to integrate with
+external dictionary apps and third-party tools.
