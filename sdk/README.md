@@ -43,6 +43,23 @@ specific `Service`.
 When users install your app, Dokuen automatically discovers it, reads the manifest metadata, and
 allows the user to enable it in their settings.
 
+## Host Compatibility
+
+Each element of the plugin API (method, parcelable, constant, class) is documented with the SDK
+version that introduced it, as a `@since` tag. Elements without one date from before SDK 0.7.0.
+
+- **Things Dokuen provides to your plugin** (for example the methods of callbacks Dokuen passes to
+  you) exist only in Dokuen versions that implement that SDK version or later. Dokuen passes the
+  SDK version it implements to `initialize()` as `PluginHostConfigKeys.HOST_SDK_VERSION` (absent
+  before 0.7.0). A call to a method Dokuen does not have is silently ignored and never answered.
+  The SDK's base classes check this before using such elements, and fall back as each element's
+  documentation describes, so plugins built on them do not need to check it themselves. If you
+  do need to check, parse the value with `SdkVersion.parse` and compare it with the element's
+  `@since` version.
+- **Things your plugin provides to Dokuen** (methods Dokuen calls on your service) are only called
+  by Dokuen when your plugin was built with an SDK version that has them, as recorded
+  automatically in your plugin's manifest. You never need to check for this.
+
 ## Getting Started
 
 Jump into the specific documentation for the type of plugin you want to build:

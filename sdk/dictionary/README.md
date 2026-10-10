@@ -486,12 +486,13 @@ by `ConfigField.key` strings from your `configSchema`.
 
 **Host configuration** — values provided by Dokuen (defined in `PluginHostConfigKeys`):
 
-| Key               | Type   | Description                                                                                                                                      |
-|-------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------|
-| `LANGUAGE`        | String | Active session source language (e.g. `"ja"`). Use this to select the appropriate internal configuration.                                         |
-| `TARGET_LANGUAGE` | String | User-selected target language (e.g. `"en"`). Provided for all plugins; for multi-target plugins, this is the user's choice from the settings UI. |
-| `USER_LOCALE`     | String | User's UI locale (e.g. `"en-US"`) for localizing your error messages.                                                                            |
-| `UI_THEME`        | String | `"dark"` or `"light"`. **Use this when choosing text colors** to ensure legibility in both themes.                                               |
+| Key                | Type   | Description                                                                                                                                      |
+|--------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| `LANGUAGE`         | String | Active session source language (e.g. `"ja"`). Use this to select the appropriate internal configuration.                                         |
+| `TARGET_LANGUAGE`  | String | User-selected target language (e.g. `"en"`). Provided for all plugins; for multi-target plugins, this is the user's choice from the settings UI. |
+| `USER_LOCALE`      | String | User's UI locale (e.g. `"en-US"`) for localizing your error messages.                                                                            |
+| `UI_THEME`         | String | `"dark"` or `"light"`. **Use this when choosing text colors** to ensure legibility in both themes.                                               |
+| `HOST_SDK_VERSION` | String | Plugin SDK version Dokuen implements (e.g. `"0.7.0"`); absent before 0.7.0. See "Host Compatibility" in the SDK README.                          |
 
 **UI_THEME and Color Accessibility:**
 
@@ -981,6 +982,94 @@ val spans = listOf(
     )
 )
 ```
+
+**Asking the Host for Images or Text During an Action:**
+
+Since SDK 0.7.0, a custom action can ask Dokuen for an image while it runs (the image that was
+OCR'd for the current lookup, or the image on the clipboard), or for the clipboard's text. These
+are typically used by dictionary plugins with SRS integration, e.g. for embedding images in a note.
+
+As of the current Dokuen version, images are provided only for users with Dokuen Pro. For other
+users, every image request is answered with `Denied` (see below). This may change in future
+versions, so always handle all possible return values generically rather than relying on that.
+Clipboard text is provided to all users.
+
+To make requests, override the two-argument `onExecuteCustomAction` instead of the one-argument
+version. Its `context` is a `CustomActionContext`, valid until the method returns:
+
+```kotlin
+override suspend fun onExecuteCustomAction(
+    actionPayload: String,
+    context: CustomActionContext
+): CustomActionResult {
+    when (val image = context.requestImage(ImageRequestSource.SCREENSHOT, interactive = true)) {
+        is ImageRequestResult.Image -> {
+            useImage(image.bitmap)
+            image.bitmap.recycle()
+        }
+        ImageRequestResult.NoImage -> { /* carry on without an image */ }
+        ImageRequestResult.Denied -> { /* carry on without an image, perhaps notifying the user why */ }
+        ImageRequestResult.Cancelled -> return CustomActionResult.SuccessMessage("Cancelled")
+    }
+    return CustomActionResult.SuccessMessage("Done")
+}
+```
+
+`context.requestImage(source, interactive = false)` suspends until Dokuen answers, with no time
+limit:
+
+* `ImageRequestSource.SCREENSHOT` is the image that was OCR'd for the current lookup (a screenshot,
+  or a camera or gallery image). With `interactive = true`, Dokuen lets the user adjust it (for
+  example crop it or choose a different image), continue without an image, or cancel the action;
+  with `false`, the full image is returned without user interaction.
+* `ImageRequestSource.CLIPBOARD` is the first image on the system clipboard, if there is one.
+  `interactive` is ignored; clipboard requests never prompt the user.
+
+Make one request at a time; a request made while another is still waiting is answered `NoImage`
+immediately. Sequential requests are fine. A request whose coroutine was cancelled (for example
+by `withTimeout`) still counts as waiting until Dokuen answers it, which for an interactive
+request may be when the user finishes with it or the action ends.
+
+`context` is only valid until `onExecuteCustomAction` returns. Requests made through it after that
+(for example from a coroutine the action launched elsewhere) are answered `NoImage` (or null, for
+text).
+
+The answer is one of:
+
+* `ImageRequestResult.Image`: its `bitmap` is an `ARGB_8888` bitmap that belongs to you; recycle it
+  when you are done with it. It may be smaller than the screen or the original file, as Dokuen may
+  scale images down.
+* `ImageRequestResult.NoImage`: the user chose to continue without an image, the clipboard has no
+  image, Dokuen could not answer the request (for example because another request is waiting),
+  or Dokuen is older than SDK 0.7.0 (see "Host Compatibility" in the SDK's top-level README).
+* `ImageRequestResult.Denied`: Dokuen denied the request. In the current Dokuen version, this
+  happens when the user does not have Dokuen Pro; future versions may deny requests for other
+  reasons too. Dokuen shows no UI for it, so the user will not know why the image is missing
+  unless your plugin tells them.
+* `ImageRequestResult.Cancelled`: the action ended while the request was waiting (see below), or
+  Dokuen's process went away. Stop without side effects.
+
+Dokuen ends an action when the user cancels it from an image request or moves on (closes the
+popup, looks up something else, navigates back or forward), whether or not a request is waiting.
+From then on, whatever the action returns is not shown, and any further request is answered
+`NoImage` (or null, for text). Dokuen runs one action at a time; taps on other action links are
+ignored until it ends.
+
+`context.requestClipboardText()` returns the clipboard's text, or null if there is none. Not every
+Dokuen version provides clipboard text, so always handle null. The text is plain (any styling is
+dropped) and at most `CustomActionContext.MAX_CLIPBOARD_TEXT_LENGTH` (10,000) UTF-16 code units
+long; longer text is cut to that length (one code unit shorter when the cut would split a
+surrogate pair). Like clipboard image requests, text requests never prompt the user.
+
+> `requestClipboardText` and `ImageRequestSource.CLIPBOARD` exist because a plugin can't read the
+> clipboard directly. Since Android 10, only the app whose window has input focus (or the default
+> keyboard) can read the clipboard, and a plugin is a background service with no window.
+
+Only request what you will use. An interactive request shows UI to the user, and on Android 12
+and later reading the clipboard makes the system show a "pasted from your clipboard" notice.
+
+`CustomActionContext` is an interface, so unit tests can call the two-argument
+`onExecuteCustomAction` with a fake that returns the answers you want to test.
 
 **Color Accessibility:**
 

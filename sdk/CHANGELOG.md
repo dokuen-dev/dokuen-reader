@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.7.0]
+
+### Added
+
+- Support for dictionary plugins to request images (OCR screenshot or clipboard) or clipboard
+  text from the host during custom actions.
+- Two-argument `onExecuteCustomAction(actionPayload, context)` overload to
+  `DictionaryPluginService`, providing a `CustomActionContext` with `requestImage()` and
+  `requestClipboardText()`.
+- Methods to `ICustomActionCallback` AIDL to support asynchronous host-bound image and text
+  requests.
+- `ImageRequestOptions` and `RequestedImage` AIDL parcelables, with `IImageRequestCallback` and
+  `ITextRequestCallback` interfaces.
+- `CustomActionContext.MAX_CLIPBOARD_TEXT_LENGTH`: the length, in UTF-16 code units, that the host
+  cuts clipboard text to (10,000).
+- `PluginHostConfigKeys.HOST_SDK_VERSION`: the SDK version the host implements, passed to
+  `initialize()`, which tells the plugin which API elements the host supports.
+- `@since` tags on API elements, naming the SDK version that introduced them (see "Host
+  Compatibility" in the SDK README).
+
 ## [0.6.0]
 
 ### Added

@@ -7,6 +7,29 @@ plugins {
 
 val sdkVersion = providers.gradleProperty("SDK_VERSION").get()
 
+// Writes the SDK version into a Kotlin source file, so the version is available to the code
+// without publishing a public BuildConfig class in the SDK.
+abstract class GenerateSdkVersionTask : DefaultTask() {
+    @get:Input
+    abstract val versionName: Property<String>
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun generate() {
+        val dir = outputDir.get().asFile.resolve("io/github/dokuendev/dokuenreader/plugin/core")
+        dir.mkdirs()
+        dir.resolve("GeneratedSdkVersion.kt").writeText(
+            """
+            package io.github.dokuendev.dokuenreader.plugin.core
+
+            internal const val GENERATED_SDK_VERSION = "${versionName.get()}"
+            """.trimIndent() + "\n"
+        )
+    }
+}
+
 configure<LibraryExtension> {
     namespace = "io.github.dokuendev.dokuenreader.plugin.core"
     compileSdk {
@@ -46,6 +69,13 @@ configure<LibraryExtension> {
 // Copy AIDL files to the location where dependent modules expect them
 androidComponents {
     onVariants { variant ->
+        val generateSdkVersion = tasks.register<GenerateSdkVersionTask>(
+            "generate${variant.name.replaceFirstChar { it.uppercase() }}SdkVersion"
+        ) {
+            versionName.set(sdkVersion)
+        }
+        variant.sources.kotlin?.addGeneratedSourceDirectory(generateSdkVersion, GenerateSdkVersionTask::outputDir)
+
         val copyAidlTask =
             tasks.register("copy${variant.name.replaceFirstChar { it.uppercase() }}AidlFiles", Copy::class.java) {
                 from("src/main/aidl")

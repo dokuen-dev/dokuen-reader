@@ -87,4 +87,20 @@ object PluginHostConfigKeys {
      * This key is only provided to dictionary plugins.
      */
     const val UI_THEME = "_ui_theme"
+
+    /**
+     * A String (MAJOR.MINOR.PATCH) giving the plugin SDK version the host app implements.
+     * Parse it with [SdkVersion.parse].
+     *
+     * It tells which parts of the plugin API the host supports. Every API element is documented
+     * with the SDK version that introduced it (`@since`); an element introduced after this
+     * version is not available on this host. Calling a host method the host does not have is
+     * silently ignored, so no answer ever arrives. The SDK's base classes check this themselves
+     * before using such elements, so plugins built on them normally do not need to read it.
+     *
+     * Absent when the host was built against an SDK older than 0.7.0.
+     *
+     * @since 0.7.0
+     */
+    const val HOST_SDK_VERSION = "_host_sdk_version"
 }

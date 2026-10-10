@@ -15,13 +15,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Instrumented tests for DictionaryPluginService base class.
  * Tests error handling for DictionaryException, generic exceptions, cancellation,
  * and security verification integration.
  */
-@Suppress("RedundantVisibilityModifier")
 @RunWith(AndroidJUnit4::class)
 class DictionaryPluginServiceTest {
 
@@ -109,7 +109,7 @@ class DictionaryPluginServiceTest {
             cursorStartIndex: Int,
             cursorEndIndex: Int
         ): DictionaryResult {
-            delay(100)
+            delay(100.milliseconds)
             throw CancellationException("Operation cancelled")
         }
 
@@ -552,6 +552,14 @@ class DictionaryPluginServiceTest {
             override fun onFailure(errorMessage: String?) {
                 latch.countDown()
             }
+
+            override fun requestImage(options: ImageRequestOptions?, callback: IImageRequestCallback?) {
+                callback?.onNoImage()
+            }
+
+            override fun requestClipboardText(callback: ITextRequestCallback?) {
+                callback?.onNoText()
+            }
         }
 
         val binder = plugin.getBinder() as IDictionaryService
@@ -582,6 +590,14 @@ class DictionaryPluginServiceTest {
             override fun onFailure(errorMessage: String?) {
                 latch.countDown()
             }
+
+            override fun requestImage(options: ImageRequestOptions?, callback: IImageRequestCallback?) {
+                callback?.onNoImage()
+            }
+
+            override fun requestClipboardText(callback: ITextRequestCallback?) {
+                callback?.onNoText()
+            }
         }
 
         val binder = plugin.getBinder() as IDictionaryService
@@ -611,6 +627,14 @@ class DictionaryPluginServiceTest {
             override fun onFailure(errorMessage: String?) {
                 receivedError = errorMessage
                 latch.countDown()
+            }
+
+            override fun requestImage(options: ImageRequestOptions?, callback: IImageRequestCallback?) {
+                callback?.onNoImage()
+            }
+
+            override fun requestClipboardText(callback: ITextRequestCallback?) {
+                callback?.onNoText()
             }
         }
 

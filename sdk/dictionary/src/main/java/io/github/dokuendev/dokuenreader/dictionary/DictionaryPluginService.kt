@@ -9,6 +9,7 @@ import io.github.dokuendev.dokuenreader.plugin.core.InitResult
 import io.github.dokuendev.dokuenreader.plugin.core.InitResultFactory
 import io.github.dokuendev.dokuenreader.plugin.core.PluginConfigSchema
 import io.github.dokuendev.dokuenreader.plugin.core.PluginHostConfigKeys
+import io.github.dokuendev.dokuenreader.plugin.core.SdkVersion
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -133,6 +134,16 @@ abstract class DictionaryPluginService : BasePluginService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
+    // Whether the host answers requests made during a custom action, from the host SDK version
+    // passed to initialize().
+    @Volatile
+    private var hostSupportsActionRequests = false
+
+    private companion object {
+        /** The first host SDK version that answers requests made during a custom action. */
+        private val MIN_HOST_SDK_VERSION_FOR_ACTION_REQUESTS = SdkVersion(0, 7, 0)
+    }
+
     /**
      * Configuration fields presented to the user in the Dokuen Settings UI.
      *
@@ -244,6 +255,7 @@ abstract class DictionaryPluginService : BasePluginService() {
      *    - `TARGET_LANGUAGE`: The user-selected target language (for multi-target plugins)
      *    - `USER_LOCALE`: The user's preferred UI locale for localizing messages
      *    - `UI_THEME`: "dark" or "light" for choosing legible colors
+     *    - `HOST_SDK_VERSION`: The plugin SDK version the host implements (absent before 0.7.0)
      *
      * If initialization fails (e.g., invalid API key, dictionary not found), return
      * [InitResultFactory.failure] with a user-friendly error message. Dokuen will
@@ -370,6 +382,19 @@ abstract class DictionaryPluginService : BasePluginService() {
         )
     }
 
+    /**
+     * Execute a custom action requested by the host application, with a [context] for asking
+     * the host for things (such as an image) while the action runs.
+     *
+     * Override this instead of the one-argument version to use [context]. The default calls the
+     * one-argument version, so plugins written against older SDKs keep working unchanged.
+     * [context] is only valid until this method returns.
+     *
+     * @since 0.7.0
+     */
+    open suspend fun onExecuteCustomAction(actionPayload: String, context: CustomActionContext): CustomActionResult =
+        onExecuteCustomAction(actionPayload)
+
     // =========================================================================
     // Internal: AIDL bridge -- plugin authors do not interact with anything below.
     // =========================================================================
@@ -394,6 +419,9 @@ abstract class DictionaryPluginService : BasePluginService() {
                 callback?.onFailure("Calling app is not authorized")
                 return
             }
+            hostSupportsActionRequests =
+                SdkVersion.parse(config?.getString(PluginHostConfigKeys.HOST_SDK_VERSION))
+                    ?.let { it >= MIN_HOST_SDK_VERSION_FOR_ACTION_REQUESTS } == true
             serviceScope.launch {
                 try {
                     val result = onInitialize(config)
@@ -457,7 +485,12 @@ abstract class DictionaryPluginService : BasePluginService() {
 
             serviceScope.launch {
                 try {
-                    val result = onExecuteCustomAction(actionPayload)
+                    val context = HostActionContext(callback, hostSupportsActionRequests)
+                    val result = try {
+                        onExecuteCustomAction(actionPayload, context)
+                    } finally {
+                        context.close()
+                    }
                     when (result) {
                         is CustomActionResult.SuccessMessage -> callback.onSuccessMessage(result.message)
                         is CustomActionResult.UpdateResult -> callback.onUpdateResult(result.result)
