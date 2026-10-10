@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -50,53 +49,16 @@ class PluginSecurityIntegrationTest {
     }
 
     @Test
-    fun verifyCallingApp_withOwnSignature_returnsTrue() {
-        // Get our own signature hash
-        val ownHash = PluginSecurity.getOwnSignatureHash(context)
-        assertNotNull(ownHash)
-
-        // Verify calling app with our own signature should succeed
-        // Note: In a real plugin, this would be called from an AIDL stub method (e.g., initialize)
-        // where Binder.getCallingUid() returns the host app's UID
-        val result = PluginSecurity.verifyCallingApp(context, ownHash!!)
+    fun verifyCallingApp_inDebugBuild_skipsCheck() {
+        // The test APK is a debug build, so any hash is accepted. PluginSecurityTest covers the
+        // signature check itself, under Robolectric, whose application is not debuggable.
+        val fakeHash = "00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:" +
+                "00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF"
 
         assertTrue(
-            "Verification should succeed with correct signature",
-            result
+            "Verification should be skipped in debug builds",
+            PluginSecurity.verifyCallingApp(context, fakeHash)
         )
-    }
-
-    @Test
-    fun verifyCallingApp_withWrongSignature_returnsFalse() {
-        // Use a fake signature hash
-        val fakeHash = "00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:" +
-                "00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff"
-
-        val result = PluginSecurity.verifyCallingApp(context, fakeHash)
-
-        assertFalse(
-            "Verification should fail with incorrect signature",
-            result
-        )
-    }
-
-    @Test
-    fun verifyCallingApp_withMalformedHash_returnsFalse() {
-        val malformedHashes = listOf(
-            "invalid",
-            "12345",
-            "",
-            "zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:" +
-                    "zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz:zz"
-        )
-
-        malformedHashes.forEach { hash ->
-            val result = PluginSecurity.verifyCallingApp(context, hash)
-            assertFalse(
-                "Verification should fail with malformed hash: $hash",
-                result
-            )
-        }
     }
 
     @Test
