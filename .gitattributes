@@ -1,0 +1,8 @@
+# Store text files with LF and check them out with LF on every platform, regardless of
+# each machine's core.autocrlf setting. Windows batch files are checked out with CRLF,
+# which cmd.exe needs in order to parse labels reliably.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+gradlew text eol=lf
+*.jar binary
