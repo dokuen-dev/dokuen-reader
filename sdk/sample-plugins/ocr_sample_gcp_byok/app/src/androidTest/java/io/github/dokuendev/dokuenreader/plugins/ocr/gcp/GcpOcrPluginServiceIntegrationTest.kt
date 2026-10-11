@@ -116,7 +116,7 @@ class GcpOcrPluginServiceIntegrationTest {
         val schema = processor!!.configSchema
 
         assertNotNull("Config schema should not be null", schema)
-        assertEquals("Should have 2 config fields", 2, schema.fields.size)
+        assertEquals("Should have 3 config fields", 3, schema.fields.size)
 
         val apiKeyField = schema.fields.find { it.key == "api_key" }
         assertNotNull("Should have api_key field", apiKeyField)
@@ -140,6 +140,12 @@ class GcpOcrPluginServiceIntegrationTest {
             "DOCUMENT_TEXT_DETECTION",
             detectionModeField.defaultValue
         )
+
+        val forceRtlField = schema.fields.find { it.key == "force_rtl_vertical" }
+        assertNotNull("Should have force_rtl_vertical field", forceRtlField)
+        assertEquals("Force RTL should be BOOLEAN type", ConfigFieldType.BOOLEAN, forceRtlField!!.type)
+        assertFalse("Force RTL should be optional", forceRtlField.isRequired)
+        assertEquals("Force RTL should default to true", "true", forceRtlField.defaultValue)
     }
 
     // -------------------------------------------------------------------------
@@ -339,10 +345,19 @@ class GcpOcrPluginServiceIntegrationTest {
     // Processing Tests (without real API calls)
     // -------------------------------------------------------------------------
 
+    /**
+     * The host only sends images to a plugin it has initialized, and the SDK rejects any other
+     * caller before plugin code runs, so a plugin never has to handle process() arriving with
+     * no initialize() at all. What it does have to handle is being asked to process after
+     * initialization failed, for example because the user removed the API key: it must fail
+     * with an error the user can act on, and must not keep using the key from an earlier
+     * initialization.
+     */
     @Test
-    fun service_processFailsWithoutInitialization() {
+    fun service_processFailsAfterApiKeyRemoved() {
         bindService()
-        // Don't initialize
+        assertTrue("Initialization with an API key should succeed", initializeService())
+        assertFalse("Re-initialization without an API key should fail", initializeService(Bundle()))
 
         val latch = CountDownLatch(1)
         var processSuccess = false
@@ -369,10 +384,12 @@ class GcpOcrPluginServiceIntegrationTest {
         )
 
         assertTrue("Processing should complete within 5 seconds", latch.await(5, TimeUnit.SECONDS))
-        assertFalse("Processing should fail without initialization", processSuccess)
-        assertEquals(OcrErrorCode.AUTHENTICATION_ERROR, errorCode)
-        assertNotNull("Should have error message", errorMessage)
-        assertTrue("Error should mention API key", errorMessage!!.contains("API key", ignoreCase = true))
+        assertFalse("Processing should fail without an API key", processSuccess)
+        assertEquals("Should fail with an authentication error", OcrErrorCode.AUTHENTICATION_ERROR, errorCode)
+        // The plugin's own message, so the request was refused locally. A stale key would
+        // instead reach GCP, whose rejection can also be an authentication error mentioning
+        // the API key.
+        assertEquals("API key is missing", errorMessage)
     }
 
     @Test
@@ -519,15 +536,16 @@ class GcpOcrPluginServiceIntegrationTest {
         assertNotNull("Processor should be bound", processor)
     }
 
-    private fun initializeService() {
+    /** Initializes the bound service with [config] and returns whether initialization succeeded. */
+    private fun initializeService(
+        config: Bundle = Bundle().apply { putString("api_key", "test-api-key") }
+    ): Boolean {
         val latch = CountDownLatch(1)
-
-        val config = Bundle().apply {
-            putString("api_key", "test-api-key")
-        }
+        var success = false
 
         processor!!.initialize(config, object : IInitCallback.Stub() {
             override fun onSuccess(result: InitResult) {
+                success = true
                 latch.countDown()
             }
 
@@ -537,6 +555,7 @@ class GcpOcrPluginServiceIntegrationTest {
         })
 
         assertTrue("Initialization should complete", latch.await(5, TimeUnit.SECONDS))
+        return success
     }
 
     private fun createTestImageData(width: Int = 640, height: Int = 480): OcrImageData {
