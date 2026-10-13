@@ -47,18 +47,44 @@ class ActionContextWiringTest {
         public override fun getBinder(): IBinder = super.getBinder()
     }
 
+    /** Returns [UpdateResult][CustomActionResult.UpdateResult] with the payload as its message. */
+    class UpdatingPlugin : DictionaryPluginService() {
+        override suspend fun onLookup(contextText: String, cursorStartIndex: Int, cursorEndIndex: Int) =
+            DictionaryResult(emptyArray())
+
+        override suspend fun onExecuteCustomAction(actionPayload: String): CustomActionResult =
+            CustomActionResult.UpdateResult(UPDATED, actionPayload.ifEmpty { null })
+
+        public override fun getBinder(): IBinder = super.getBinder()
+    }
+
     private class RecordingHost : ICustomActionCallback.Stub() {
         val latch = CountDownLatch(1)
+        var outcome: String? = null
         var message: String? = null
+        var result: DictionaryResult? = null
         var imageRequests = 0
         var textRequests = 0
 
         override fun onSuccessMessage(message: String?) {
+            outcome = "onSuccessMessage"
             this.message = message
             latch.countDown()
         }
 
-        override fun onUpdateResult(result: DictionaryResult?) = latch.countDown()
+        override fun onUpdateResult(result: DictionaryResult?) {
+            outcome = "onUpdateResult"
+            this.result = result
+            latch.countDown()
+        }
+
+        override fun onUpdateResultWithMessage(result: DictionaryResult?, message: String?) {
+            outcome = "onUpdateResultWithMessage"
+            this.result = result
+            this.message = message
+            latch.countDown()
+        }
+
         override fun onFailure(errorMessage: String?) = latch.countDown()
 
         override fun requestImage(options: ImageRequestOptions?, callback: IImageRequestCallback?) {
@@ -90,14 +116,14 @@ class ActionContextWiringTest {
         public override fun getBinder(): IBinder = super.getBinder()
     }
 
-    private fun run(service: DictionaryPluginService, hostVersion: String?): RecordingHost {
+    private fun run(service: DictionaryPluginService, hostVersion: String?, payload: String = "payload"): RecordingHost {
         // Debug builds skip the host signature check, which Robolectric's caller would fail.
         service.applicationInfo.flags = service.applicationInfo.flags or ApplicationInfo.FLAG_DEBUGGABLE
         val binder = service.javaClass.getMethod("getBinder").invoke(service) as IDictionaryService
         val config = Bundle().apply { hostVersion?.let { putString(PluginHostConfigKeys.HOST_SDK_VERSION, it) } }
         binder.initialize(config, null)
         val host = RecordingHost()
-        binder.executeCustomAction("payload", host)
+        binder.executeCustomAction(payload, host)
         assertTrue(host.latch.await(5, TimeUnit.SECONDS))
         return host
     }
@@ -138,5 +164,33 @@ class ActionContextWiringTest {
         assertNull(plugin.context!!.requestClipboardText())
         assertEquals(0, host.imageRequests)
         assertEquals(0, host.textRequests)
+    }
+
+    @Test
+    fun updateWithMessageReachesANewHostAsBoth() {
+        val host = run(Robolectric.buildService(UpdatingPlugin::class.java).create().get(), "0.7.0", "Added")
+        assertEquals("onUpdateResultWithMessage", host.outcome)
+        assertEquals("Added", host.message)
+        assertEquals("updated", host.result!!.entries.single().headword)
+    }
+
+    @Test
+    fun updateWithMessageReachesAnOlderHostAsAPlainUpdate() {
+        val host = run(Robolectric.buildService(UpdatingPlugin::class.java).create().get(), "0.6.9", "Added")
+        assertEquals("onUpdateResult", host.outcome)
+        assertNull(host.message)
+        assertEquals("updated", host.result!!.entries.single().headword)
+    }
+
+    @Test
+    fun updateWithoutMessageIsAPlainUpdate() {
+        val host = run(Robolectric.buildService(UpdatingPlugin::class.java).create().get(), "0.7.0", "")
+        assertEquals("onUpdateResult", host.outcome)
+        assertNull(host.message)
+        assertEquals("updated", host.result!!.entries.single().headword)
+    }
+
+    private companion object {
+        val UPDATED = DictionaryResult(arrayOf(DictionaryEntry("updated", null, null, StyledText("body"))))
     }
 }

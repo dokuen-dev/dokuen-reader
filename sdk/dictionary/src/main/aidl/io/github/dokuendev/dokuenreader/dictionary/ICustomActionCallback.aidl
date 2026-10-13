@@ -18,6 +18,14 @@ interface ICustomActionCallback {
     oneway void onFailure(String errorMessage);
 
     /**
+     * Reports success, like onUpdateResult, and also shows [message] in the host UI, like
+     * onSuccessMessage.
+     *
+     * @since 0.7.0
+     */
+    oneway void onUpdateResultWithMessage(in DictionaryResult result, String message);
+
+    /**
      * Asks the host for an image. Valid only while this action has not reported its outcome,
      * and only one request (image or text) may be outstanding at a time, otherwise the host
      * answers onNoImage().

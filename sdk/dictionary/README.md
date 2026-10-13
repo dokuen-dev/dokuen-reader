@@ -933,6 +933,8 @@ exception on failure:
   dictionary window UI.
 * **`CustomActionResult.UpdateResult(result)`**: Dynamically updates the displayed dictionary
   entries with new result data (e.g., to modify content after toggling a state).
+* **`CustomActionResult.UpdateResult(result, message)`**: Does both: updates the displayed entries
+  and displays `message` as a success status message.
 * **Throwing an exception**: Automatically maps to a failure state in the host UI, displaying your
   exception message.
 

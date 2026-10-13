@@ -493,7 +493,13 @@ abstract class DictionaryPluginService : BasePluginService() {
                     }
                     when (result) {
                         is CustomActionResult.SuccessMessage -> callback.onSuccessMessage(result.message)
-                        is CustomActionResult.UpdateResult -> callback.onUpdateResult(result.result)
+                        is CustomActionResult.UpdateResult -> when {
+                            // onUpdateResultWithMessage was added in the same SDK version as action requests.
+                            hostSupportsActionRequests && result.message != null ->
+                                callback.onUpdateResultWithMessage(result.result, result.message)
+
+                            else -> callback.onUpdateResult(result.result)
+                        }
                     }
                 } catch (e: DictionaryException) {
                     try {

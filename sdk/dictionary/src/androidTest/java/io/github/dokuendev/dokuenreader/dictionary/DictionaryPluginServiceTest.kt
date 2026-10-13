@@ -549,6 +549,10 @@ class DictionaryPluginServiceTest {
                 latch.countDown()
             }
 
+            override fun onUpdateResultWithMessage(result: DictionaryResult?, message: String?) {
+                latch.countDown()
+            }
+
             override fun onFailure(errorMessage: String?) {
                 latch.countDown()
             }
@@ -587,6 +591,10 @@ class DictionaryPluginServiceTest {
                 latch.countDown()
             }
 
+            override fun onUpdateResultWithMessage(result: DictionaryResult?, message: String?) {
+                latch.countDown()
+            }
+
             override fun onFailure(errorMessage: String?) {
                 latch.countDown()
             }
@@ -621,6 +629,10 @@ class DictionaryPluginServiceTest {
             }
 
             override fun onUpdateResult(result: DictionaryResult?) {
+                latch.countDown()
+            }
+
+            override fun onUpdateResultWithMessage(result: DictionaryResult?, message: String?) {
                 latch.countDown()
             }
 

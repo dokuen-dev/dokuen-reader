@@ -13,6 +13,9 @@
   requests.
 - `ImageRequestOptions` and `RequestedImage` AIDL parcelables, with `IImageRequestCallback` and
   `ITextRequestCallback` interfaces.
+- Optional `message` to `CustomActionResult.UpdateResult`, so an action can update the displayed
+  results and show a status message at the same time.
+- `onUpdateResultWithMessage` to `ICustomActionCallback` AIDL, which carries such a result.
 - `CustomActionContext.MAX_CLIPBOARD_TEXT_LENGTH`: the length, in UTF-16 code units, that the host
   cuts clipboard text to (10,000).
 - `PluginHostConfigKeys.HOST_SDK_VERSION`: the SDK version the host implements, passed to

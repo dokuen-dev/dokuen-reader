@@ -50,6 +50,7 @@ class HostActionContextTest {
 
         override fun onSuccessMessage(message: String?) {}
         override fun onUpdateResult(result: DictionaryResult?) {}
+        override fun onUpdateResultWithMessage(result: DictionaryResult?, message: String?) {}
         override fun onFailure(errorMessage: String?) {}
 
         override fun requestImage(options: ImageRequestOptions?, callback: IImageRequestCallback?) {
