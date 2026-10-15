@@ -564,6 +564,10 @@ class DictionaryPluginServiceTest {
             override fun requestClipboardText(callback: ITextRequestCallback?) {
                 callback?.onNoText()
             }
+
+            override fun requestReadings(text: String?, callback: IReadingsRequestCallback?) {
+                callback?.onNoReadings()
+            }
         }
 
         val binder = plugin.getBinder() as IDictionaryService
@@ -606,6 +610,10 @@ class DictionaryPluginServiceTest {
             override fun requestClipboardText(callback: ITextRequestCallback?) {
                 callback?.onNoText()
             }
+
+            override fun requestReadings(text: String?, callback: IReadingsRequestCallback?) {
+                callback?.onNoReadings()
+            }
         }
 
         val binder = plugin.getBinder() as IDictionaryService
@@ -647,6 +655,10 @@ class DictionaryPluginServiceTest {
 
             override fun requestClipboardText(callback: ITextRequestCallback?) {
                 callback?.onNoText()
+            }
+
+            override fun requestReadings(text: String?, callback: IReadingsRequestCallback?) {
+                callback?.onNoReadings()
             }
         }
 

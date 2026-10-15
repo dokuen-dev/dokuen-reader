@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.0]
+
+### Added
+
+- Support for dictionary plugins to request the readings of a text from the host during custom
+  actions, through `CustomActionContext.requestReadings(text)`.
+- `requestReadings` method to `ICustomActionCallback` AIDL, along with the
+  `IReadingsRequestCallback` interface, the `WordReading` AIDL parcelable, and a `WordReading(...)`
+  factory function.
+- `CustomActionContext.MAX_READINGS_TEXT_LENGTH`: the longest text, in UTF-16 code units, a
+  readings request may carry (500).
+
 ## [0.7.0]
 
 ### Added

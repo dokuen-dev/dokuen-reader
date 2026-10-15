@@ -58,6 +58,20 @@ class ActionContextWiringTest {
         public override fun getBinder(): IBinder = super.getBinder()
     }
 
+    /** Requests the readings of 日本 and reports how many words came back. */
+    class ReadingsPlugin : DictionaryPluginService() {
+        override suspend fun onLookup(contextText: String, cursorStartIndex: Int, cursorEndIndex: Int) =
+            DictionaryResult(emptyArray())
+
+        override suspend fun onExecuteCustomAction(
+            actionPayload: String,
+            context: CustomActionContext
+        ): CustomActionResult =
+            CustomActionResult.SuccessMessage(context.requestReadings("日本")?.size.toString())
+
+        public override fun getBinder(): IBinder = super.getBinder()
+    }
+
     private class RecordingHost : ICustomActionCallback.Stub() {
         val latch = CountDownLatch(1)
         var outcome: String? = null
@@ -96,6 +110,13 @@ class ActionContextWiringTest {
             textRequests++
             callback!!.onNoText()
         }
+
+        var readingsRequests = 0
+
+        override fun requestReadings(text: String?, callback: IReadingsRequestCallback?) {
+            readingsRequests++
+            callback!!.onReadings(arrayOf(wordReading(0, 2)))
+        }
     }
 
     /** Keeps its context and only uses it after the action has returned. */
@@ -116,7 +137,11 @@ class ActionContextWiringTest {
         public override fun getBinder(): IBinder = super.getBinder()
     }
 
-    private fun run(service: DictionaryPluginService, hostVersion: String?, payload: String = "payload"): RecordingHost {
+    private fun run(
+        service: DictionaryPluginService,
+        hostVersion: String?,
+        payload: String = "payload"
+    ): RecordingHost {
         // Debug builds skip the host signature check, which Robolectric's caller would fail.
         service.applicationInfo.flags = service.applicationInfo.flags or ApplicationInfo.FLAG_DEBUGGABLE
         val binder = service.javaClass.getMethod("getBinder").invoke(service) as IDictionaryService
@@ -147,6 +172,20 @@ class ActionContextWiringTest {
         val host = run(Robolectric.buildService(RequestingPlugin::class.java).create().get(), "0.6.9")
         assertEquals(0, host.imageRequests)
         assertEquals("NoImage", host.message)
+    }
+
+    @Test
+    fun hostWithReadingsReceivesTheReadingsRequest() {
+        val host = run(Robolectric.buildService(ReadingsPlugin::class.java).create().get(), "0.8.0")
+        assertEquals(1, host.readingsRequests)
+        assertEquals("1", host.message)
+    }
+
+    @Test
+    fun hostWithoutReadingsIsNotAskedForThem() {
+        val host = run(Robolectric.buildService(ReadingsPlugin::class.java).create().get(), "0.7.0")
+        assertEquals(0, host.readingsRequests)
+        assertEquals("null", host.message)
     }
 
     @Test

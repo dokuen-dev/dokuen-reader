@@ -9,12 +9,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The [CustomActionContext] of one custom action, which sends requests to the host over the
- * action's [callback]. When the host is too old to answer them ([hostSupportsRequests] false),
- * or after [close] has been called, nothing is sent and every request gets its "nothing" answer.
+ * action's [callback]. When the host is too old to answer them ([hostSupportsRequests] false, or
+ * [hostSupportsReadings] false for readings requests), or after [close] has been called, nothing
+ * is sent and every request gets its "nothing" answer.
  */
 internal class HostActionContext(
     private val callback: ICustomActionCallback,
-    private val hostSupportsRequests: Boolean
+    private val hostSupportsRequests: Boolean,
+    private val hostSupportsReadings: Boolean
 ) : CustomActionContext {
 
     // Set while the host may be holding a request, which is either from sending it until the host
@@ -75,6 +77,23 @@ internal class HostActionContext(
                 }
             })
         }
+
+    override suspend fun requestReadings(text: String): List<WordReading>? {
+        if (!hostSupportsReadings || text.isEmpty() || text.length > CustomActionContext.MAX_READINGS_TEXT_LENGTH) {
+            return null
+        }
+        return request(nothing = null, onHostGone = null, discard = {}) { answer ->
+            callback.requestReadings(text, object : IReadingsRequestCallback.Stub() {
+                override fun onReadings(words: Array<WordReading>?) {
+                    answer { words.orEmpty().toList() }
+                }
+
+                override fun onNoReadings() {
+                    answer { null }
+                }
+            })
+        }
+    }
 
     /**
      * Sends one request with [send] and suspends until the host answers it through `answer`.

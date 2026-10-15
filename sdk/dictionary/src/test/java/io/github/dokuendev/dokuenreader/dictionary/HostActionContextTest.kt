@@ -62,6 +62,14 @@ class HostActionContextTest {
             textRequests++
             textReply(callback!!)
         }
+
+        val readingsRequests = mutableListOf<String>()
+        var readingsReply: (IReadingsRequestCallback) -> Unit = { it.onNoReadings() }
+
+        override fun requestReadings(text: String?, callback: IReadingsRequestCallback?) {
+            readingsRequests += text!!
+            readingsReply(callback!!)
+        }
     }
 
     /** An RGBA_8888 image of [width] x [height] whose every pixel is R=0x11 G=0x22 B=0x33 A=0xFF. */
@@ -90,7 +98,7 @@ class HostActionContextTest {
     @Test
     fun oldHostGetsNoRequestAndNoImage() = runBlocking {
         val host = FakeHost()
-        val context = HostActionContext(host, hostSupportsRequests = false)
+        val context = HostActionContext(host, hostSupportsRequests = false, hostSupportsReadings = false)
 
         assertEquals(ImageRequestResult.NoImage, context.requestImage(ImageRequestSource.SCREENSHOT, true))
         assertNull(context.requestClipboardText())
@@ -101,7 +109,7 @@ class HostActionContextTest {
     @Test
     fun forwardsSourceAndInteractiveFlag() = runBlocking {
         val host = FakeHost()
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         context.requestImage(ImageRequestSource.SCREENSHOT, interactive = true)
         context.requestImage(ImageRequestSource.CLIPBOARD)
@@ -112,7 +120,7 @@ class HostActionContextTest {
     @Test
     fun imageReplyBecomesBitmap() = runBlocking {
         val host = FakeHost().apply { imageReply = { it.onImage(requestedImage(3, 2)) } }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         val result = context.requestImage(ImageRequestSource.SCREENSHOT)
 
@@ -128,7 +136,7 @@ class HostActionContextTest {
     fun imageKeepsItsChannelOrder() = runBlocking {
         assumeTrue("This platform's Bitmap does not store RGBA", platformStoresRgba())
         val host = FakeHost().apply { imageReply = { it.onImage(requestedImage(3, 2)) } }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         val bitmap = (context.requestImage(ImageRequestSource.SCREENSHOT) as ImageRequestResult.Image).bitmap
 
@@ -138,7 +146,7 @@ class HostActionContextTest {
     @Test
     fun malformedImageBecomesNoImage() = runBlocking {
         val host = FakeHost().apply { imageReply = { it.onImage(requestedImage(3, 2, size = 7)) } }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         assertEquals(ImageRequestResult.NoImage, context.requestImage(ImageRequestSource.SCREENSHOT))
     }
@@ -146,7 +154,7 @@ class HostActionContextTest {
     @Test
     fun cancelledReplyIsPassedThrough() = runBlocking {
         val host = FakeHost().apply { imageReply = { it.onCancelled() } }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         assertEquals(ImageRequestResult.Cancelled, context.requestImage(ImageRequestSource.SCREENSHOT, true))
     }
@@ -154,7 +162,7 @@ class HostActionContextTest {
     @Test
     fun deniedReplyIsPassedThrough() = runBlocking {
         val host = FakeHost().apply { imageReply = { it.onDenied() } }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         assertEquals(ImageRequestResult.Denied, context.requestImage(ImageRequestSource.CLIPBOARD))
     }
@@ -163,7 +171,7 @@ class HostActionContextTest {
     fun secondConcurrentRequestGetsNoImageWithoutAsking() = runBlocking {
         var pending: IImageRequestCallback? = null
         val host = FakeHost().apply { imageReply = { pending = it } }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         val first = async { context.requestImage(ImageRequestSource.SCREENSHOT, true) }
         while (pending == null) yield()
@@ -178,7 +186,7 @@ class HostActionContextTest {
     @Test
     fun clipboardTextReplies() = runBlocking {
         val host = FakeHost().apply { textReply = { it.onText("hello") } }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         assertEquals("hello", context.requestClipboardText())
         host.textReply = { it.onNoText() }
@@ -188,7 +196,7 @@ class HostActionContextTest {
     @Test
     fun closedContextAsksNothing() = runBlocking {
         val host = FakeHost()
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
         context.close()
 
         assertEquals(ImageRequestResult.NoImage, context.requestImage(ImageRequestSource.SCREENSHOT))
@@ -201,7 +209,7 @@ class HostActionContextTest {
     fun cancelledRequestBlocksOthersUntilTheHostAnswers() = runBlocking {
         var pending: IImageRequestCallback? = null
         val host = FakeHost().apply { imageReply = { pending = it } }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         val first = async { context.requestImage(ImageRequestSource.SCREENSHOT, true) }
         while (pending == null) yield()
@@ -218,7 +226,7 @@ class HostActionContextTest {
     @Test
     fun hostDyingDuringImageRequestCancelsIt() = runBlocking {
         val host = FakeHost().apply { imageReply = {} }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         val first = async { context.requestImage(ImageRequestSource.SCREENSHOT, true) }
         while (host.deathRecipient == null) yield()
@@ -231,7 +239,7 @@ class HostActionContextTest {
     @Test
     fun hostDyingDuringTextRequestAnswersNull() = runBlocking {
         val host = FakeHost().apply { textReply = {} }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         val first = async { context.requestClipboardText() }
         while (host.deathRecipient == null) yield()
@@ -245,7 +253,7 @@ class HostActionContextTest {
     @Test
     fun failedSendIsCancelledAndFreesTheSlot() = runBlocking {
         val host = FakeHost().apply { imageReply = { throw RemoteException() } }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         assertEquals(ImageRequestResult.Cancelled, context.requestImage(ImageRequestSource.SCREENSHOT))
         assertNull(host.deathRecipient)
@@ -256,7 +264,7 @@ class HostActionContextTest {
     @Test
     fun unexpectedSendFailureIsRethrownAndFreesTheSlot() = runBlocking {
         val host = FakeHost().apply { imageReply = { throw IllegalStateException("boom") } }
-        val context = HostActionContext(host, hostSupportsRequests = true)
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
 
         val failure = runCatching { context.requestImage(ImageRequestSource.SCREENSHOT) }.exceptionOrNull()
 
@@ -268,7 +276,7 @@ class HostActionContextTest {
 
     @Test
     fun answerArrivingAfterCancellationIsNotBuilt() = runBlocking {
-        val context = HostActionContext(FakeHost(), hostSupportsRequests = true)
+        val context = HostActionContext(FakeHost(), hostSupportsRequests = true, hostSupportsReadings = false)
         var answer: ((() -> String) -> Boolean)? = null
 
         val waiting = async { context.request(nothing = "nothing", onHostGone = "gone", discard = {}) { answer = it } }
@@ -282,7 +290,7 @@ class HostActionContextTest {
 
     @Test
     fun answerDeliveredAsTheCallerIsCancelledIsDiscarded() = runBlocking {
-        val context = HostActionContext(FakeHost(), hostSupportsRequests = true)
+        val context = HostActionContext(FakeHost(), hostSupportsRequests = true, hostSupportsReadings = false)
         val discarded = mutableListOf<String>()
         var answer: ((() -> String) -> Boolean)? = null
 
@@ -296,5 +304,81 @@ class HostActionContextTest {
         waiting.join()
 
         assertEquals(listOf("value"), discarded)
+    }
+
+    @Test
+    fun hostOlderThanReadingsGetsNoReadingsRequest() = runBlocking {
+        val host = FakeHost()
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = false)
+
+        assertNull(context.requestReadings("日本"))
+        assertTrue(host.readingsRequests.isEmpty())
+    }
+
+    @Test
+    fun emptyOrOverlongTextIsNotSent() = runBlocking {
+        val host = FakeHost()
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = true)
+        val longest = "あ".repeat(CustomActionContext.MAX_READINGS_TEXT_LENGTH)
+
+        assertNull(context.requestReadings(""))
+        assertNull(context.requestReadings(longest + "あ"))
+        assertTrue(host.readingsRequests.isEmpty())
+        context.requestReadings(longest)
+        assertEquals(listOf(longest), host.readingsRequests)
+    }
+
+    @Test
+    fun readingsAreReturnedAsTheHostSentThem() = runBlocking {
+        val host = FakeHost().apply {
+            readingsReply = { it.onReadings(arrayOf(wordReading(0, 2, rubySpan(0, 2, "にほん")), wordReading(2, 3))) }
+        }
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = true)
+
+        assertEquals(listOf("0-2 0-2=にほん", "2-3"), context.requestReadings("日本は")!!.describe())
+        host.readingsReply = { it.onReadings(null) }
+        assertEquals(emptyList<WordReading>(), context.requestReadings("日本は"))
+        host.readingsReply = { it.onNoReadings() }
+        assertNull(context.requestReadings("日本は"))
+    }
+
+    @Test
+    fun readingsShareTheOneOutstandingRequest() = runBlocking {
+        var pending: IReadingsRequestCallback? = null
+        val host = FakeHost().apply { readingsReply = { pending = it } }
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = true)
+
+        val first = async { context.requestReadings("日本") }
+        while (pending == null) yield()
+        assertNull(context.requestClipboardText())
+        assertEquals(0, host.textRequests)
+        pending.onNoReadings()
+
+        assertNull(first.await())
+        host.textReply = { it.onText("after") }
+        assertEquals("after", context.requestClipboardText())
+    }
+
+    @Test
+    fun hostDyingDuringReadingsRequestAnswersNull() = runBlocking {
+        val host = FakeHost().apply { readingsReply = {} }
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = true)
+
+        val first = async { context.requestReadings("日本") }
+        while (host.deathRecipient == null) yield()
+        host.die()
+
+        assertNull(first.await())
+        assertNull(host.deathRecipient)
+    }
+
+    @Test
+    fun closedContextAsksForNoReadings() = runBlocking {
+        val host = FakeHost()
+        val context = HostActionContext(host, hostSupportsRequests = true, hostSupportsReadings = true)
+        context.close()
+
+        assertNull(context.requestReadings("日本"))
+        assertTrue(host.readingsRequests.isEmpty())
     }
 }

@@ -1028,13 +1028,14 @@ limit:
   `interactive` is ignored; clipboard requests never prompt the user.
 
 Make one request at a time; a request made while another is still waiting is answered `NoImage`
-immediately. Sequential requests are fine. A request whose coroutine was cancelled (for example
-by `withTimeout`) still counts as waiting until Dokuen answers it, which for an interactive
-request may be when the user finishes with it or the action ends.
+(or null, for text and readings) immediately. Sequential requests are fine. A request whose
+coroutine was cancelled (for example by `withTimeout`) still counts as waiting until Dokuen
+answers it, which for an interactive request may be when the user finishes with it or the action
+ends.
 
 `context` is only valid until `onExecuteCustomAction` returns. Requests made through it after that
 (for example from a coroutine the action launched elsewhere) are answered `NoImage` (or null, for
-text).
+text and readings).
 
 The answer is one of:
 
@@ -1054,8 +1055,8 @@ The answer is one of:
 Dokuen ends an action when the user cancels it from an image request or moves on (closes the
 popup, looks up something else, navigates back or forward), whether or not a request is waiting.
 From then on, whatever the action returns is not shown, and any further request is answered
-`NoImage` (or null, for text). Dokuen runs one action at a time; taps on other action links are
-ignored until it ends.
+`NoImage` (or null, for text and readings). Dokuen runs one action at a time; taps on other
+action links are ignored until it ends.
 
 `context.requestClipboardText()` returns the clipboard's text, or null if there is none. Not every
 Dokuen version provides clipboard text, so always handle null. The text is plain (any styling is
@@ -1066,6 +1067,31 @@ surrogate pair). Like clipboard image requests, text requests never prompt the u
 > `requestClipboardText` and `ImageRequestSource.CLIPBOARD` exist because a plugin can't read the
 > clipboard directly. Since Android 10, only the app whose window has input focus (or the default
 > keyboard) can read the clipboard, and a plugin is a background service with no window.
+
+`context.requestReadings(text)` asks Dokuen how to read `text`. Dokuen splits the text into
+words and gives each word the readings of the parts that need one (in Japanese, its runs of
+kanji). The method returns null if Dokuen provides no readings, which happens when `text` is
+empty or longer than `CustomActionContext.MAX_READINGS_TEXT_LENGTH` (500) UTF-16 code units, when
+the session language has no reading format, when the request was refused, or when Dokuen is older
+than SDK 0.8.0. Always handle null.
+
+Each `WordReading` has `startIndex` and `endIndex` (the word's range in `text`) and `ruby`, the
+`RubySpan`s of the word's parts that have a reading, with offsets into `text` (not into the
+word). Every answer follows these rules:
+
+* Words are sorted by `startIndex` and do not overlap. Text that no word covers (whitespace, for
+  example) has no reading.
+* Each ruby span lies inside its word, a word's spans are sorted and do not overlap, and every
+  span has a non-empty `rubyText`.
+* Every word's readings are included; the user's known-words list does not apply.
+* The format depends on the session language (`PluginHostConfigKeys.LANGUAGE`). The user's
+  furigana display settings never change it.
+
+| Language | Words | Ruby | Reading format |
+|---|---|---|---|
+| `ja` | The words Dokuen's tokenizer finds, merged where Dokuen's dictionary reads several of them as one word | Each run of kanji (with digits, for counters such as 1月) | Hiragana |
+
+Other session languages get null.
 
 Only request what you will use. An interactive request shows UI to the user, and on Android 12
 and later reading the clipboard makes the system show a "pasted from your clipboard" notice.

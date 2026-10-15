@@ -77,6 +77,23 @@ interface CustomActionContext {
      */
     suspend fun requestClipboardText(): String?
 
+    /**
+     * Asks the host for the readings of [text]. The host splits [text] into words and gives each
+     * word the ruby of its parts that have a reading, in the reading format of the session
+     * language (see [io.github.dokuendev.dokuenreader.plugin.core.PluginHostConfigKeys.LANGUAGE]
+     * and the format table in the SDK documentation). Returns null if the host provides no
+     * readings, which happens when [text] is empty or longer than [MAX_READINGS_TEXT_LENGTH], the
+     * session language has no reading format, the request was refused or cancelled, or the host is
+     * too old. Null is always a possible answer.
+     *
+     * Words are sorted and do not overlap, every ruby span lies inside its word and has a
+     * non-empty reading, and a word's spans are sorted and do not overlap. Offsets are UTF-16
+     * indices into [text].
+     *
+     * @since 0.8.0
+     */
+    suspend fun requestReadings(text: String): List<WordReading>? = null
+
     companion object {
         /**
          * The most UTF-16 code units of clipboard text the host returns. Longer text is cut to
@@ -85,5 +102,13 @@ interface CustomActionContext {
          * @since 0.7.0
          */
         const val MAX_CLIPBOARD_TEXT_LENGTH = 10_000
+
+        /**
+         * The longest text, in UTF-16 code units, a readings request may carry. Longer text is not
+         * cut; the request is answered with null.
+         *
+         * @since 0.8.0
+         */
+        const val MAX_READINGS_TEXT_LENGTH = 500
     }
 }

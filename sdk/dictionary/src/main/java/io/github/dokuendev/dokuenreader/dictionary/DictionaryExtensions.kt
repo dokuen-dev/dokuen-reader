@@ -84,6 +84,24 @@ fun RubySpan(
 }
 
 /**
+ * Creates a WordReading with the specified properties.
+ *
+ * @param startIndex Start of the word in the requested text (inclusive)
+ * @param endIndex End of the word in the requested text (exclusive)
+ * @param ruby The word's ruby, with offsets into the requested text (not into the word)
+ * @since 0.8.0
+ */
+fun WordReading(
+    startIndex: Int,
+    endIndex: Int,
+    ruby: Array<RubySpan>
+): WordReading = WordReading().apply {
+    this.startIndex = startIndex
+    this.endIndex = endIndex
+    this.ruby = ruby
+}
+
+/**
  * Creates a HeadwordSpan with the specified properties.
  *
  * Makes a character range within a headword clickable with the given link target.

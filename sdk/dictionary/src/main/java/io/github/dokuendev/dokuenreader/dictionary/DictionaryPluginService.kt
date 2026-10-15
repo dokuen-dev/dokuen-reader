@@ -139,9 +139,16 @@ abstract class DictionaryPluginService : BasePluginService() {
     @Volatile
     private var hostSupportsActionRequests = false
 
+    // Whether the host answers readings requests, also decided by the host SDK version.
+    @Volatile
+    private var hostSupportsReadingsRequests = false
+
     private companion object {
         /** The first host SDK version that answers requests made during a custom action. */
         private val MIN_HOST_SDK_VERSION_FOR_ACTION_REQUESTS = SdkVersion(0, 7, 0)
+
+        /** The first host SDK version that answers readings requests. */
+        private val MIN_HOST_SDK_VERSION_FOR_READINGS_REQUESTS = SdkVersion(0, 8, 0)
     }
 
     /**
@@ -419,9 +426,9 @@ abstract class DictionaryPluginService : BasePluginService() {
                 callback?.onFailure("Calling app is not authorized")
                 return
             }
-            hostSupportsActionRequests =
-                SdkVersion.parse(config?.getString(PluginHostConfigKeys.HOST_SDK_VERSION))
-                    ?.let { it >= MIN_HOST_SDK_VERSION_FOR_ACTION_REQUESTS } == true
+            val hostVersion = SdkVersion.parse(config?.getString(PluginHostConfigKeys.HOST_SDK_VERSION))
+            hostSupportsActionRequests = hostVersion?.let { it >= MIN_HOST_SDK_VERSION_FOR_ACTION_REQUESTS } == true
+            hostSupportsReadingsRequests = hostVersion?.let { it >= MIN_HOST_SDK_VERSION_FOR_READINGS_REQUESTS } == true
             serviceScope.launch {
                 try {
                     val result = onInitialize(config)
@@ -485,7 +492,7 @@ abstract class DictionaryPluginService : BasePluginService() {
 
             serviceScope.launch {
                 try {
-                    val context = HostActionContext(callback, hostSupportsActionRequests)
+                    val context = HostActionContext(callback, hostSupportsActionRequests, hostSupportsReadingsRequests)
                     val result = try {
                         onExecuteCustomAction(actionPayload, context)
                     } finally {
