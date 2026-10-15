@@ -170,7 +170,7 @@ Each provider enforces this schema through its native mechanism:
 - **Endpoint**:
   `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`
 - **Auth**: API key as query parameter
-- **Model**: User-configurable via the `model` config field; defaults to `gemini-flash-latest`
+- **Model**: User-configurable via the `model` config field. Defaults to `gemini-flash-latest`
 - **Structured Output**: `generationConfig.responseMimeType = "application/json"` +
   `generationConfig.responseSchema`
 
@@ -178,14 +178,14 @@ Each provider enforces this schema through its native mechanism:
 
 - **Endpoint**: `https://api.openai.com/v1/chat/completions`
 - **Auth**: `Authorization: Bearer {key}`
-- **Model**: User-configurable via the `model` config field; defaults to `gpt-5.1-mini`
+- **Model**: User-configurable via the `model` config field. Defaults to `gpt-5.1-mini`
 - **Structured Output**: `response_format.type = "json_schema"` with `strict: true`
 
 #### Claude
 
 - **Endpoint**: `https://api.anthropic.com/v1/messages`
 - **Auth**: `x-api-key: {key}` + `anthropic-version: 2023-06-01`
-- **Model**: User-configurable via the `model` config field; defaults to `claude-sonnet-4-6`
+- **Model**: User-configurable via the `model` config field. Defaults to `claude-sonnet-4-6`
 - **Structured Output**: Forced tool call. Defines a `define_word` tool and sets
   `tool_choice = { type: "tool", name: "define_word" }`; the LLM's structured `input` JSON is
   extracted from the `tool_use` content block
@@ -278,7 +278,7 @@ Typical performance with good network connection:
 
 - **BYOK model** — Users provide their own API key, maintaining full control
 - **No data retention** — Text is sent to the selected LLM provider per their data processing terms
-- **API key in memory only** — Cleared on `onShutdown()`; never persisted by the plugin
+- **API key in memory only** — Cleared on `onShutdown()` and never persisted by the plugin
 - **Recommendation** — Users should restrict API keys to the minimum necessary scope in their
   provider's dashboard
 

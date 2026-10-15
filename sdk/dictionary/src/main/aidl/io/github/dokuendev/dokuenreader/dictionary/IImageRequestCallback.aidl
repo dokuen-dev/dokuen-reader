@@ -12,8 +12,9 @@ interface IImageRequestCallback {
     oneway void onImage(in RequestedImage image);
 
     /**
-     * No image: the user chose to continue without one, the clipboard holds no image, or the
-     * host could not answer the request (for example because another request is waiting).
+     * Called when there is no image, because the user chose to continue without one, the
+     * clipboard holds no image, or the host could not answer the request (for example because
+     * another request is waiting).
      */
     oneway void onNoImage();
 

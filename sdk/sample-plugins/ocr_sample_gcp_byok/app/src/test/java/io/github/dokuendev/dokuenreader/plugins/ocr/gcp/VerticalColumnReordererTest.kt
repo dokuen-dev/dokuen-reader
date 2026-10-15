@@ -11,10 +11,10 @@ import org.robolectric.RobolectricTestRunner
 class VerticalColumnReordererTest {
 
     /**
-     * Builds one synthetic column's symbols: one character per position, reading top-to-bottom
-     * starting at ([startX], [startY]), optionally drifting horizontally by [xDriftPerChar] per
-     * step to simulate a photo where the text is at a slight angle rather than perfectly
-     * vertical.
+     * Builds the symbols of one synthetic column. One character per position, reading
+     * top-to-bottom starting at ([startX], [startY]), optionally drifting horizontally by
+     * [xDriftPerChar] per step to simulate a photo where the text is at a slight angle rather than
+     * perfectly vertical.
      */
     private fun buildColumn(
         text: String,

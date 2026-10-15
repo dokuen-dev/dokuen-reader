@@ -12,6 +12,9 @@ interface ITextRequestCallback {
      */
     oneway void onText(String text);
 
-    /** No text: the clipboard has none, the request was refused, or the host does not provide it. */
+    /**
+     * Called when there is no text, because the clipboard has none, the request was refused, or
+     * the host does not provide it.
+     */
     oneway void onNoText();
 }

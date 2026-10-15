@@ -8,18 +8,18 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * The [CustomActionContext] of one custom action: sends requests to the host over the action's
- * [callback]. When the host is too old to answer them ([hostSupportsRequests] false), or after
- * [close] has been called, nothing is sent and every request gets its "nothing" answer.
+ * The [CustomActionContext] of one custom action, which sends requests to the host over the
+ * action's [callback]. When the host is too old to answer them ([hostSupportsRequests] false),
+ * or after [close] has been called, nothing is sent and every request gets its "nothing" answer.
  */
 internal class HostActionContext(
     private val callback: ICustomActionCallback,
     private val hostSupportsRequests: Boolean
 ) : CustomActionContext {
 
-    // Set while the host may be holding a request: from sending it until the host answers it or
-    // dies, or until sending fails. It stays set even if the caller stops waiting earlier, so
-    // the SDK never has more requests outstanding than the host allows.
+    // Set while the host may be holding a request, which is either from sending it until the host
+    // answers it or dies, or until sending fails. It stays set even if the caller stops waiting
+    // earlier, so the SDK never has more requests outstanding than the host allows.
     private val requestInFlight = AtomicBoolean(false)
 
     private val closed = AtomicBoolean(false)
@@ -102,7 +102,7 @@ internal class HostActionContext(
             val answered = AtomicBoolean(false)
             val binder = callback.asBinder()
             lateinit var deathRecipient: IBinder.DeathRecipient
-            // Ends the request on the SDK side; false if it had already ended.
+            // Ends the request on the SDK side. Returns false if it had already ended.
             val finish: () -> Boolean = {
                 answered.compareAndSet(false, true).also { first ->
                     if (first) {
@@ -124,8 +124,8 @@ internal class HostActionContext(
             } catch (_: RemoteException) {
                 answer { onHostGone }
             } catch (t: Throwable) {
-                // Requests are oneway, so the host's own exceptions never come back here: this
-                // failed before the transaction, and the host has nothing to answer.
+                // Requests are oneway, so the host's own exceptions never come back here. This
+                // one was thrown before the transaction, so the host has nothing to answer.
                 finish()
                 throw t
             }

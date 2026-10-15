@@ -65,8 +65,8 @@ internal object VerticalColumnReorderer {
         val lastCenterX = symbols.last().second.centerX()
         val endpointDeltaInChars = (firstCenterX - lastCenterX) / refCharWidth
 
-        // Last symbol comfortably to the LEFT of the first: reading already flowed right-to-left
-        // overall. Confidently correct already.
+        // If the last symbol is comfortably to the LEFT of the first, reading already flowed
+        // right-to-left overall, so the order is confidently correct already.
         if (endpointDeltaInChars >= SAFE_ALREADY_RTL_THRESHOLD_CHARS) return symbols
         // No strong signal either way (e.g. a single column, where first/last land at nearly the
         // same X). Leave it alone rather than run the full check on weak evidence.
@@ -75,7 +75,8 @@ internal object VerticalColumnReorderer {
         val columns = segmentIntoColumns(symbols, refCharWidth, refCharHeight)
         if (columns.size < 2) return symbols
         // Any column too short to trust its own internal consistency disqualifies the whole
-        // block. Conservative by design; a partial/uncertain reorder is worse than none.
+        // block. This is conservative by design, because a partial or uncertain reorder is worse
+        // than none.
         if (columns.any { it.size < MIN_SYMBOLS_PER_COLUMN }) return symbols
 
         val columnCenters = columns.map { column -> column.map { it.second.centerX() }.average() }

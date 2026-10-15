@@ -27,9 +27,9 @@ sealed class ImageRequestResult {
     data class Image(val bitmap: android.graphics.Bitmap) : ImageRequestResult()
 
     /**
-     * No image: the user chose to continue without one, the clipboard holds no image, the host
-     * could not answer the request (for example because another request is waiting), or the
-     * host is too old to answer requests.
+     * There is no image, because the user chose to continue without one, the clipboard holds no
+     * image, the host could not answer the request (for example because another request is
+     * waiting), or the host is too old to answer requests.
      */
     data object NoImage : ImageRequestResult()
 
@@ -48,9 +48,9 @@ sealed class ImageRequestResult {
 }
 
 /**
- * Things a plugin can ask the host for while one of its custom actions runs. Passed to
- * [DictionaryPluginService.onExecuteCustomAction]; valid only until that call returns, after
- * which every request returns the "nothing" answer immediately.
+ * Things a plugin can ask the host for while one of its custom actions runs. A context is passed
+ * to [DictionaryPluginService.onExecuteCustomAction] and is valid only until that call returns,
+ * after which every request returns the "nothing" answer immediately.
  *
  * Requests are answered one at a time. Calling a method while another request of the same
  * action is still waiting returns the "nothing" answer immediately. A request whose caller was
@@ -61,10 +61,11 @@ sealed class ImageRequestResult {
 interface CustomActionContext {
     /**
      * Asks the host for an image from [source]. [interactive] applies to
-     * [ImageRequestSource.SCREENSHOT] only: true lets the user adjust the image (for example
-     * crop it or choose a different one), decline, or cancel the action; false returns the
-     * full screenshot without user interaction. Suspends until the host answers, with no time
-     * limit. The image may be smaller than the screen or the original file.
+     * [ImageRequestSource.SCREENSHOT] only. If it is true, the user can adjust the image (for
+     * example crop it or choose a different one), decline, or cancel the action. If it is false,
+     * the full screenshot is returned without user interaction. Suspends until the host
+     * answers, with no time limit. The image may be smaller than the screen or the original
+     * file.
      */
     suspend fun requestImage(source: ImageRequestSource, interactive: Boolean = false): ImageRequestResult
 

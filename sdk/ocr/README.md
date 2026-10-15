@@ -315,7 +315,7 @@ The `config` Bundle contains:
     - `PluginHostConfigKeys.USER_LOCALE` (`"_user_locale"`): The user's preferred UI
       locale for localizing error messages.
     - `PluginHostConfigKeys.HOST_SDK_VERSION` (`"_host_sdk_version"`): The plugin SDK
-      version Dokuen implements (e.g., `"0.7.0"`); absent before 0.7.0. See "Host
+      version Dokuen implements (e.g., `"0.7.0"`). Absent before 0.7.0. See "Host
       Compatibility" in the SDK README.
 
 **Preprocessing requirements:** You may request that Dokuen preprocess the image
