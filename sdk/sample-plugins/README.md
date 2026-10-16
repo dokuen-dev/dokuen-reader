@@ -104,11 +104,14 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 ## Plugin SDK Dependencies
 
-All samples depend on the Plugin SDK modules:
+All samples get the Plugin SDK from Maven Central:
 
-- `plugin_sdk:core` - Core plugin infrastructure
-- `plugin_sdk:ocr` - OCR-specific interfaces (for OCR plugins)
-- `plugin_sdk:dictionary` - Dictionary-specific interfaces (for Dictionary plugins)
+- `io.github.dokuendev.dokuenreader:ocr` - OCR-specific interfaces (for OCR plugins)
+- `io.github.dokuendev.dokuenreader:dictionary` - Dictionary-specific interfaces (for Dictionary
+  plugins)
+
+Both include `io.github.dokuendev.dokuenreader:plugin-core`, the core plugin infrastructure,
+transitively.
 
 ## Documentation
 

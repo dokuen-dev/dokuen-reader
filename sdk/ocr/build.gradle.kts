@@ -2,10 +2,11 @@ import com.android.build.api.dsl.LibraryExtension
 
 plugins {
     id("com.android.library")
-    id("maven-publish")
 }
 
-val sdkVersion = providers.gradleProperty("SDK_VERSION").get()
+// property() rather than providers.gradleProperty(), so that a build that includes these modules
+// can supply the version as an extra property instead.
+val sdkVersion = property("SDK_VERSION") as String
 
 configure<LibraryExtension> {
     namespace = "io.github.dokuendev.dokuenreader.ocr"
@@ -37,13 +38,6 @@ configure<LibraryExtension> {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-            withJavadocJar()
-        }
-    }
 }
 
 // Ensure plugin-core AIDL files are copied before compiling ocr AIDL
@@ -64,17 +58,4 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test:core:1.7.0")
-}
-
-afterEvaluate {
-    publishing {
-        publications {
-            create<MavenPublication>("release") {
-                from(components["release"])
-                groupId = "io.github.dokuendev.dokuenreader"
-                artifactId = "ocr"
-                version = sdkVersion
-            }
-        }
-    }
 }

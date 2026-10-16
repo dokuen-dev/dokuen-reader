@@ -1,6 +1,6 @@
 # Dokuen OCR Plugin SDK
 
-[![](https://jitpack.io/v/dokuen-dev/dokuen-reader.svg)](https://jitpack.io/#dokuen-dev/dokuen-reader)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.dokuendev.dokuenreader/ocr)](https://central.sonatype.com/artifact/io.github.dokuendev.dokuenreader/ocr)
 
 Build text recognition plugins for Dokuen Reader. This SDK provides a Kotlin-first
 development experience with native coroutine support and automatic lifecycle management.
@@ -10,9 +10,10 @@ development experience with native coroutine support and automatic lifecycle man
 1. [ ] Create a new Android project in Android Studio ("No Activity" template, since this runs as a
    background service).
 2. [ ] Set `minSdk` >= 29 in your `build.gradle.kts`.
-3. [ ] Add the JitPack repository to your `settings.gradle.kts` (see [Installation](#installation)).
+3. [ ] Make sure `mavenCentral()` is in your `settings.gradle.kts` repositories (see
+   [Installation](#installation)).
 4. [ ] Add the SDK dependency:
-   `implementation("com.github.dokuen-dev.dokuen-reader:ocr:VERSION")`
+   `implementation("io.github.dokuendev.dokuenreader:ocr:VERSION")`
 5. [ ] Create your service class extending `OcrPluginService`.
 6. [ ] Add all required metadata to your `AndroidManifest.xml` (
    see [AndroidManifest.xml](#androidmanifestxml)).
@@ -22,14 +23,14 @@ development experience with native coroutine support and automatic lifecycle man
 
 ## Installation
 
-Add the JitPack repository to your project's `settings.gradle.kts`:
+The SDK is published to Maven Central. New Android Studio projects already include it, but if
+yours does not, add `mavenCentral()` to your project's `settings.gradle.kts`:
 
 ```kotlin
 dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") }
     }
 }
 ```
@@ -38,10 +39,14 @@ Then add the SDK dependency in your module's `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    // Replace VERSION with the latest release version (e.g. 0.5.0) shown in the badge above
-    implementation("com.github.dokuen-dev.dokuen-reader:ocr:VERSION")
+    // Replace VERSION with the latest release version (e.g. 0.8.1) shown in the badge above
+    implementation("io.github.dokuendev.dokuenreader:ocr:VERSION")
 }
 ```
+
+Earlier versions of the SDK were published through JitPack as
+`com.github.dokuen-dev.dokuen-reader:ocr`. To upgrade from one of those, switch to the
+coordinates above and remove the JitPack repository if nothing else in your project uses it.
 
 The SDK follows [semantic versioning](https://semver.org/):
 

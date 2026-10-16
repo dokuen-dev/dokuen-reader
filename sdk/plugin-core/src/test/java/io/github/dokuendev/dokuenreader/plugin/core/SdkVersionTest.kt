@@ -41,4 +41,12 @@ class SdkVersionTest {
     fun advertisedSdkVersionIsValid() {
         assertNotNull(SdkVersion.parse(PluginSdkInfo.VERSION))
     }
+
+    @Test
+    fun advertisedSdkVersionIsTheBuildSdkVersion() {
+        // Set by this module's build file from the SDK_VERSION the build was configured with.
+        val buildVersion = System.getProperty("dokuen.sdkVersion")
+        assertNotNull("The dokuen.sdkVersion system property is not set; run the tests through Gradle.", buildVersion)
+        assertEquals(buildVersion, PluginSdkInfo.VERSION)
+    }
 }

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.1]
+
+### Changed
+
+- The SDK is now published to Maven Central, under the group `io.github.dokuendev.dokuenreader`
+  (`io.github.dokuendev.dokuenreader:plugin-core`, `:ocr`, and `:dictionary`). Earlier versions
+  were published only through JitPack, as `com.github.dokuen-dev.dokuen-reader:<module>`, and
+  new versions are no longer published there. To upgrade, change the group in your dependencies
+  and remove the JitPack repository if nothing else in your project uses it. The API is the same
+  as in 0.8.0.
+
 ## [0.8.0]
 
 ### Added

@@ -2,10 +2,11 @@ import com.android.build.api.dsl.LibraryExtension
 
 plugins {
     id("com.android.library")
-    id("maven-publish")
 }
 
-val sdkVersion = providers.gradleProperty("SDK_VERSION").get()
+// property() rather than providers.gradleProperty(), so that a build that includes these modules
+// can supply the version as an extra property instead.
+val sdkVersion = property("SDK_VERSION") as String
 
 // Writes the SDK version into a Kotlin source file, so the version is available to the code
 // without publishing a public BuildConfig class in the SDK.
@@ -57,13 +58,6 @@ configure<LibraryExtension> {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-            withJavadocJar()
-        }
-    }
 }
 
 // Copy AIDL files to the location where dependent modules expect them
@@ -99,6 +93,11 @@ androidComponents {
     }
 }
 
+// Lets the unit tests check the generated version against the SDK_VERSION of the build.
+tasks.withType<Test>().configureEach {
+    systemProperty("dokuen.sdkVersion", sdkVersion)
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.17.0")
     testImplementation("junit:junit:4.13.2")
@@ -108,17 +107,4 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test:core:1.7.0")
-}
-
-afterEvaluate {
-    publishing {
-        publications {
-            create<MavenPublication>("release") {
-                from(components["release"])
-                groupId = "io.github.dokuendev.dokuenreader"
-                artifactId = "plugin-core"
-                version = sdkVersion
-            }
-        }
-    }
 }
