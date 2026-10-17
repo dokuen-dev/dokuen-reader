@@ -21,7 +21,7 @@ abstract class BasePluginService : Service() {
 
     private val verifiedUids = Collections.newSetFromMap(ConcurrentHashMap<Int, Boolean>())
 
-    final override fun onBind(intent: Intent?): IBinder? {
+    final override fun onBind(intent: Intent?): IBinder {
         return getBinder()
     }
 

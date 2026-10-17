@@ -1092,9 +1092,9 @@ word). Every answer follows these rules:
 * The format depends on the session language (`PluginHostConfigKeys.LANGUAGE`). The user's
   furigana display settings never change it.
 
-| Language | Words | Ruby | Reading format |
-|---|---|---|---|
-| `ja` | The words Dokuen's tokenizer finds, merged where Dokuen's dictionary reads several of them as one word | Each run of kanji (with digits, for counters such as 1月) | Hiragana |
+| Language | Words                                                                                                  | Ruby                                                     | Reading format |
+|----------|--------------------------------------------------------------------------------------------------------|----------------------------------------------------------|----------------|
+| `ja`     | The words Dokuen's tokenizer finds, merged where Dokuen's dictionary reads several of them as one word | Each run of kanji (with digits, for counters such as 1月) | Hiragana       |
 
 Other session languages get null.
 

@@ -1,8 +1,11 @@
 # ML Kit OCR Plugin Sample
 
-A simple sample OCR plugin for Dokuen Reader that demonstrates on-device text recognition using Google ML Kit.
+A simple sample OCR plugin for Dokuen Reader that demonstrates on-device text recognition using
+Google ML Kit.
 
-**Note:** This sample provides identical functionality to Dokuen's built-in "On-Device" Scan Mode and is not intended for production use. It serves as a straightforward example for plugin developers learning the SDK.
+**Note:** This sample provides identical functionality to Dokuen's built-in "On-Device" Scan Mode
+and is not intended for production use. It serves as a straightforward example for plugin developers
+learning the SDK.
 
 ## Features
 
@@ -11,7 +14,8 @@ This sample demonstrates:
 - **On-device OCR** - Shows how to use a local ML model without network requests
 - **Simple configuration** - Demonstrates a single boolean config option (half resolution)
 - **Preprocessing requirements** - Shows how to request image preprocessing from the host app
-- **Vertical text conversion** - Demonstrates converting horizontal OCR output to vertical reading order when the user specifies vertical direction
+- **Vertical text conversion** - Demonstrates converting horizontal OCR output to vertical reading
+  order when the user specifies vertical direction
 - **Symbol-level bounds** - Shows how to extract and align character-level bounding boxes
 - **ML Kit integration** - Example of integrating Google's ML Kit text recognition library
 
@@ -71,38 +75,44 @@ The plugin reports its capabilities to Dokuen:
 
 Users can configure:
 
-- **Half resolution** (boolean) - Downsample images to half resolution before processing. This improves speed and often accuracy for large text, but should be disabled for small text like web pages.
+- **Half resolution** (boolean) - Downsample images to half resolution before processing. This
+  improves speed and often accuracy for large text, but should be disabled for small text like web
+  pages.
 
 ### Processing Flow
 
 1. **Initialization** (`onInitialize`)
-   - Creates ML Kit `TextRecognizer` with Japanese options
-   - Reads user's half-resolution preference
-   - Returns preprocessing requirements to host app
+    - Creates ML Kit `TextRecognizer` with Japanese options
+    - Reads user's half-resolution preference
+    - Returns preprocessing requirements to host app
 
 2. **Image Processing** (`onProcessImage`)
-   - Receives bitmap from host app (already preprocessed per requirements)
-   - Runs ML Kit text recognition
-   - Extracts text blocks with symbol-level bounding boxes
-   - Converts to vertical reading order if requested
-   - Returns list of `OcrBlock` objects
+    - Receives bitmap from host app (already preprocessed per requirements)
+    - Runs ML Kit text recognition
+    - Extracts text blocks with symbol-level bounding boxes
+    - Converts to vertical reading order if requested
+    - Returns list of `OcrBlock` objects
 
 3. **Shutdown** (`onShutdown`)
-   - Closes ML Kit recognizer
-   - Releases resources
+    - Closes ML Kit recognizer
+    - Releases resources
 
 ### Vertical Text Conversion
 
-ML Kit doesn't natively support vertical text recognition. When the user explicitly requests vertical text direction, this plugin converts ML Kit's horizontal output into vertical reading order:
+ML Kit doesn't natively support vertical text recognition. When the user explicitly requests
+vertical text direction, this plugin converts ML Kit's horizontal output into vertical reading
+order:
 
 1. **Extract symbols** - Flatten all text blocks into individual characters with bounding boxes
 2. **Group into columns** - Cluster symbols that overlap horizontally into vertical columns
 3. **Sort for reading** - Order columns right-to-left, symbols within columns top-to-bottom
 4. **Regroup into blocks** - Merge nearby symbols into coherent text blocks
 
-This demonstrates how to post-process OCR results to support different text layouts when the underlying OCR engine doesn't natively support them.
+This demonstrates how to post-process OCR results to support different text layouts when the
+underlying OCR engine doesn't natively support them.
 
-**Note:** This conversion only happens when the user explicitly selects "vertical" text direction. The plugin does not automatically detect text direction.
+**Note:** This conversion only happens when the user explicitly selects "vertical" text direction.
+The plugin does not automatically detect text direction.
 
 ## Code Structure
 
@@ -123,9 +133,11 @@ The sample includes comprehensive tests:
 
 ### Unit Tests (`src/test/`)
 
-- `MlkitOcrPluginServiceTest.kt` - Tests plugin lifecycle, configuration, and vertical text conversion logic using Robolectric
+- `MlkitOcrPluginServiceTest.kt` - Tests plugin lifecycle, configuration, and vertical text
+  conversion logic using Robolectric
 
 Run unit tests:
+
 ```bash
 ./gradlew test
 ```
@@ -135,6 +147,7 @@ Run unit tests:
 - `MlkitOcrPluginServiceIntegrationTest.kt` - Tests actual ML Kit integration on device
 
 Run instrumented tests:
+
 ```bash
 ./gradlew connectedAndroidTest
 ```
@@ -149,9 +162,12 @@ Typical performance on mid-range devices:
 
 ## Limitations
 
-- **Japanese only** - This sample uses ML Kit's Japanese recognizer. For other languages, use different ML Kit recognizer options.
-- **Vertical text conversion** - The vertical text conversion is heuristic-based and may not be perfect for all layouts.
-- **No auto text direction** - Plugin doesn't automatically detect text direction; user must explicitly specify horizontal or vertical.
+- **Japanese only** - This sample uses ML Kit's Japanese recognizer. For other languages, use
+  different ML Kit recognizer options.
+- **Vertical text conversion** - The vertical text conversion is heuristic-based and may not be
+  perfect for all layouts.
+- **No auto text direction** - Plugin doesn't automatically detect text direction; user must
+  explicitly specify horizontal or vertical.
 
 ## License
 

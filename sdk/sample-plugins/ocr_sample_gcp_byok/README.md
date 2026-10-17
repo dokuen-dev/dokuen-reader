@@ -1,6 +1,7 @@
 # Google Cloud Vision BYOK OCR Plugin Sample
 
-A fully functional sample OCR plugin for Dokuen Reader that demonstrates cloud-based text recognition using Google Cloud Vision API with "Bring Your Own Key" (BYOK).
+A fully functional sample OCR plugin for Dokuen Reader that demonstrates cloud-based text
+recognition using Google Cloud Vision API with "Bring Your Own Key" (BYOK).
 
 ## Features
 
@@ -8,10 +9,13 @@ This sample demonstrates:
 
 - **Network-based OCR** - Shows how to integrate a cloud API instead of on-device models
 - **Required configuration** - Demonstrates user-provided API key validation
-- **Multiple config fields** - Shows both required (API key) and optional (detection mode) configuration
-- **Error mapping** - Maps HTTP and API error codes to appropriate `OcrErrorCode` values, including network errors and timeouts
+- **Multiple config fields** - Shows both required (API key) and optional (detection mode)
+  configuration
+- **Error mapping** - Maps HTTP and API error codes to appropriate `OcrErrorCode` values, including
+  network errors and timeouts
 - **JSON parsing** - Parses GCP Vision API's nested block/paragraph/word/symbol structure
-- **Text direction interpretation** - Infers whether GCP detected text as horizontal or vertical by analyzing returned symbol geometry
+- **Text direction interpretation** - Infers whether GCP detected text as horizontal or vertical by
+  analyzing returned symbol geometry
 - **Language hints** - Passes language preferences to the API for better accuracy
 
 ## Requirements
@@ -84,48 +88,52 @@ Users must configure:
 
 - **API Key** (required) - Your GCP API key with Cloud Vision API enabled
 - **Text Detection Mode** (optional) - Choose between:
-  - `TEXT_DETECTION` - For sparse text (signs, labels, UI elements)
-  - `DOCUMENT_TEXT_DETECTION` - For dense text (books, documents, handwriting) - **Recommended**
+    - `TEXT_DETECTION` - For sparse text (signs, labels, UI elements)
+    - `DOCUMENT_TEXT_DETECTION` - For dense text (books, documents, handwriting) - **Recommended**
 
 ### Processing Flow
 
 1. **Initialization** (`onInitialize`)
-   - Validates API key is provided
-   - Reads language preference from host app
-   - Reads detection mode from user config
-   - Returns preprocessing requirements (grayscale conversion)
+    - Validates API key is provided
+    - Reads language preference from host app
+    - Reads detection mode from user config
+    - Returns preprocessing requirements (grayscale conversion)
 
 2. **Image Processing** (`onProcessImage`)
-   - Converts bitmap to JPEG and base64 encodes it
-   - Sends request to GCP Vision API with language hints
-   - Parses JSON response into blocks/paragraphs/words/symbols
-   - Automatically detects text direction per block (if "auto" requested)
-   - Returns list of `OcrBlock` objects with normalized bounding boxes
+    - Converts bitmap to JPEG and base64 encodes it
+    - Sends request to GCP Vision API with language hints
+    - Parses JSON response into blocks/paragraphs/words/symbols
+    - Automatically detects text direction per block (if "auto" requested)
+    - Returns list of `OcrBlock` objects with normalized bounding boxes
 
 3. **Shutdown** (`onShutdown`)
-   - Clears API key and configuration
-   - Releases resources
+    - Clears API key and configuration
+    - Releases resources
 
 ### Automatic Text Direction Detection
 
-When the user selects "auto" text direction, the plugin interprets the text direction that the Vision API detected.
+When the user selects "auto" text direction, the plugin interprets the text direction that the
+Vision API detected.
 
 **How it works:**
+
 - GCP Vision API detects text orientation and returns symbols in reading order
 - For horizontal text: symbols are ordered left-to-right
 - For vertical text: symbols are ordered top-to-bottom, right-to-left
 - The plugin infers which orientation GCP detected by analyzing the geometry of returned symbols
 
 **Inference algorithm:**
+
 1. **Geometric analysis** - Compares horizontal vs vertical span of symbol centers
 2. **Orientation classification**:
-   - If neighboring symbols are left and right of each other → GCP detected HORIZONTAL text
-   - If neighboring symbols are above and below each other → GCP detected VERTICAL text
-   - Otherwise → INCONCLUSIVE (ambiguous, e.g., single character)
+    - If neighboring symbols are left and right of each other → GCP detected HORIZONTAL text
+    - If neighboring symbols are above and below each other → GCP detected VERTICAL text
+    - Otherwise → INCONCLUSIVE (ambiguous, e.g., single character)
 3. **Neighbor consensus** - Inconclusive blocks adopt their neighbors' orientation when both agree
 4. **Fallback** - Remaining inconclusive blocks default to horizontal
 
-This produces accurate mixed-orientation results for documents with both horizontal and vertical text.
+This produces accurate mixed-orientation results for documents with both horizontal and vertical
+text.
 
 ## Code Structure
 
@@ -154,7 +162,8 @@ The plugin handles various error conditions:
 - **Service unavailable** (503) - GCP service temporarily down
 - **Internal errors** (500+) - GCP server errors
 
-All errors are mapped to appropriate `OcrErrorCode` values and displayed to users with helpful messages.
+All errors are mapped to appropriate `OcrErrorCode` values and displayed to users with helpful
+messages.
 
 ## Testing
 
@@ -162,18 +171,22 @@ The sample includes comprehensive tests:
 
 ### Unit Tests (`src/test/`)
 
-- `GcpOcrPluginServiceTest.kt` - Tests plugin lifecycle, configuration, API request building, response parsing, and text direction detection using Robolectric
+- `GcpOcrPluginServiceTest.kt` - Tests plugin lifecycle, configuration, API request building,
+  response parsing, and text direction detection using Robolectric
 
 Run unit tests:
+
 ```bash
 ./gradlew test
 ```
 
 ### Instrumented Tests (`src/androidTest/`)
 
-- `GcpOcrPluginServiceIntegrationTest.kt` - Tests actual GCP API integration on device (requires valid API key)
+- `GcpOcrPluginServiceIntegrationTest.kt` - Tests actual GCP API integration on device (requires
+  valid API key)
 
 Run instrumented tests:
+
 ```bash
 ./gradlew connectedAndroidTest
 ```
@@ -189,7 +202,8 @@ Typical performance with good network connection:
 ## Privacy & Security
 
 - **BYOK model** - Users provide their own API key, maintaining full control
-- **No data retention** - Images are processed by GCP and not stored (per GCP's data processing terms)
+- **No data retention** - Images are processed by GCP and not stored (per GCP's data processing
+  terms)
 - **API key security** - Keys are stored locally on device, never shared
 - **Recommendation** - Restrict your API key to Cloud Vision API only in GCP Console
 
@@ -206,4 +220,5 @@ Apache 2.0 - See LICENSE file for details
 
 ## Disclaimer
 
-This is a sample plugin for demonstration purposes. Users are responsible for their own GCP API usage and costs.
+This is a sample plugin for demonstration purposes. Users are responsible for their own GCP API
+usage and costs.

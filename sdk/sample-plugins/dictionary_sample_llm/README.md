@@ -34,15 +34,15 @@ This sample demonstrates:
 
 Choose a provider and obtain a key:
 
-| Provider | Where to get a key                                              | Default model          |
-|----------|-----------------------------------------------------------------|------------------------|
-| Gemini   | [Google AI Studio](https://aistudio.google.com/apikey)          | `gemini-flash-latest`  |
-| Claude   | [Anthropic Console](https://console.anthropic.com/)             | `claude-sonnet-4-6`    |
-| ChatGPT  | [OpenAI Platform](https://platform.openai.com/account/api-keys) | `gpt-5.1-mini`         |
+| Provider | Where to get a key                                              | Default model         |
+|----------|-----------------------------------------------------------------|-----------------------|
+| Gemini   | [Google AI Studio](https://aistudio.google.com/apikey)          | `gemini-flash-latest` |
+| Claude   | [Anthropic Console](https://console.anthropic.com/)             | `claude-sonnet-4-6`   |
+| ChatGPT  | [OpenAI Platform](https://platform.openai.com/account/api-keys) | `gpt-5.1-mini`        |
 
 Providers retire model IDs on their own schedule, independent of this plugin's release cycle. If a
-default above stops working, set the `model` config field (see [Configuration](#configuration)) to the
-provider's current model ID instead.
+default above stops working, set the `model` config field (see [Configuration](#configuration)) to
+the provider's current model ID instead.
 
 ### 2. Install the Plugin
 
