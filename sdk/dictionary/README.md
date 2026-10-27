@@ -219,18 +219,43 @@ required metadata fields must be present.**
     <!-- Optional but recommended -->
     <meta-data android:name="plugin_website" android:value="https://example.com" />
     <meta-data android:name="plugin_support_email" android:value="support@example.com" />
+
+    <!-- Optional inline icon -->
+    <meta-data android:name="plugin_inline_icon" android:resource="@drawable/ic_my_plugin" />
+    <meta-data android:name="plugin_inline_icon_monochrome" android:resource="@drawable/ic_my_plugin_monochrome" />
 </service>
 ```
 
-| Field                  | Required | Description                               |
-|------------------------|----------|-------------------------------------------|
-| `plugin_name`          | Yes      | Display name shown in the plugin manager  |
-| `plugin_version`       | Yes      | Version string (e.g., "1.0.0")            |
-| `plugin_author`        | Yes      | Your name or organization                 |
-| `plugin_description`   | Yes      | Short description of what the plugin does |
-| `plugin_license`       | Yes      | License type (e.g., "MIT", "Apache 2.0")  |
-| `plugin_website`       | No       | URL for more information                  |
-| `plugin_support_email` | No       | Contact email for support                 |
+| Field                           | Required | Description                               |
+|---------------------------------|----------|-------------------------------------------|
+| `plugin_name`                   | Yes      | Display name shown in the plugin manager  |
+| `plugin_version`                | Yes      | Version string (e.g., "1.0.0")            |
+| `plugin_author`                 | Yes      | Your name or organization                 |
+| `plugin_description`            | Yes      | Short description of what the plugin does |
+| `plugin_license`                | Yes      | License type (e.g., "MIT", "Apache 2.0")  |
+| `plugin_website`                | No       | URL for more information                  |
+| `plugin_support_email`          | No       | Contact email for support                 |
+| `plugin_inline_icon`            | No       | Full-color inline icon (see below)        |
+| `plugin_inline_icon_monochrome` | No       | Tinted inline icon (see below)            |
+
+### Inline icon
+
+Dokuen can show a small icon for your plugin where it shows as selected in the app UI, such as in
+the dictionaries list in the dictionary settings screen or the summary icons on the main screen.
+If not specified, Dokuen shows a generic plugin icon there.
+
+Declare it with either or both of these keys, each pointing at a drawable resource with
+`android:resource` (not `android:value`):
+
+- `plugin_inline_icon` is drawn in its own colors. It must not use theme attributes, and it must
+  read well on both light and dark backgrounds.
+- `plugin_inline_icon_monochrome` is tinted by Dokuen based on the user's color theme.
+
+If both are declared, they should be the same icon geometry, differing only in the colors used.
+
+A key whose value is not a drawable resource, or whose drawable fails to load, is ignored with a
+warning in logcat. This icon is separate from the service's `android:icon`, which the plugin
+manager shows.
 
 ## API Reference
 

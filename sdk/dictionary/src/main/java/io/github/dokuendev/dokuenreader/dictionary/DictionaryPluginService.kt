@@ -123,6 +123,10 @@ import kotlinx.coroutines.launch
  *     <!-- Optional but recommended -->
  *     <meta-data android:name="plugin_website" android:value="https://example.com" />
  *     <meta-data android:name="plugin_support_email" android:value="support@example.com" />
+ *
+ *     <!-- Optional inline icon -->
+ *     <meta-data android:name="plugin_inline_icon" android:resource="@drawable/ic_my_plugin" />
+ *     <meta-data android:name="plugin_inline_icon_monochrome" android:resource="@drawable/ic_my_plugin_monochrome" />
  * </service>
  * ```
  *

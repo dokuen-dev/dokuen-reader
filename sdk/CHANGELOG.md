@@ -9,6 +9,8 @@
 - `onProgressMessage` method to `ICustomActionCallback` AIDL.
 - `CustomActionContext.MAX_PROGRESS_MESSAGE_LENGTH`: the length, in UTF-16 code units, that the
   host cuts progress messages to (100).
+- Optional `plugin_inline_icon` and `plugin_inline_icon_monochrome` service meta-data, each an
+  `android:resource` drawable, for a small icon that Dokuen shows where the plugin is selected.
 
 ## [0.8.1]
 
