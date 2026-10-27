@@ -48,9 +48,10 @@ sealed class ImageRequestResult {
 }
 
 /**
- * Things a plugin can ask the host for while one of its custom actions runs. A context is passed
- * to [DictionaryPluginService.onExecuteCustomAction] and is valid only until that call returns,
- * after which every request returns the "nothing" answer immediately.
+ * Things a plugin can ask the host for, or tell it, while one of its custom actions runs. A
+ * context is passed to [DictionaryPluginService.onExecuteCustomAction] and is valid only until
+ * that call returns, after which every request returns the "nothing" answer immediately and
+ * progress messages are dropped.
  *
  * Requests are answered one at a time. Calling a method while another request of the same
  * action is still waiting returns the "nothing" answer immediately. A request whose caller was
@@ -94,6 +95,25 @@ interface CustomActionContext {
      */
     suspend fun requestReadings(text: String): List<WordReading>? = null
 
+    /**
+     * Shows [message] to the user while the action runs, in place of the host's default progress
+     * text, for example "Adding note..." while an "Add to Anki" action works.
+     * Call it once, at the start of the action. It says what the action is doing, not how far
+     * along it is, and is not meant for reporting stages or percentages.
+     *
+     * A later call replaces the previous message, and null (or an empty or blank message)
+     * restores the default. The message disappears when the action reports its outcome.
+     *
+     * The host cuts messages longer than [MAX_PROGRESS_MESSAGE_LENGTH], and may shorten a message
+     * further when it does not fit on screen, so keep messages short.
+     *
+     * Returns immediately without waiting for the host. Does nothing after the action has ended,
+     * or on hosts older than 0.9.0, which show their default text instead.
+     *
+     * @since 0.9.0
+     */
+    fun setProgressMessage(message: String?) {}
+
     companion object {
         /**
          * The most UTF-16 code units of clipboard text the host returns. Longer text is cut to
@@ -110,5 +130,14 @@ interface CustomActionContext {
          * @since 0.8.0
          */
         const val MAX_READINGS_TEXT_LENGTH = 500
+
+        /**
+         * The most UTF-16 code units of a progress message the host shows. Longer messages are cut
+         * to this length, one code unit shorter when that would split a surrogate pair. A message
+         * within this length may still be shortened on screen (see [setProgressMessage]).
+         *
+         * @since 0.9.0
+         */
+        const val MAX_PROGRESS_MESSAGE_LENGTH = 100
     }
 }

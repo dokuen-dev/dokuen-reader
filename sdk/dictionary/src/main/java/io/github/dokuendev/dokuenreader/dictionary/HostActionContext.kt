@@ -11,12 +11,14 @@ import java.util.concurrent.atomic.AtomicBoolean
  * The [CustomActionContext] of one custom action, which sends requests to the host over the
  * action's [callback]. When the host is too old to answer them ([hostSupportsRequests] false, or
  * [hostSupportsReadings] false for readings requests), or after [close] has been called, nothing
- * is sent and every request gets its "nothing" answer.
+ * is sent and every request gets its "nothing" answer. Progress messages are likewise sent only
+ * while the context is open and [hostSupportsProgressMessages] is true.
  */
 internal class HostActionContext(
     private val callback: ICustomActionCallback,
     private val hostSupportsRequests: Boolean,
-    private val hostSupportsReadings: Boolean
+    private val hostSupportsReadings: Boolean,
+    private val hostSupportsProgressMessages: Boolean
 ) : CustomActionContext {
 
     // Set while the host may be holding a request, which is either from sending it until the host
@@ -92,6 +94,15 @@ internal class HostActionContext(
                     answer { null }
                 }
             })
+        }
+    }
+
+    override fun setProgressMessage(message: String?) {
+        if (!hostSupportsProgressMessages || closed.get()) return
+        try {
+            callback.onProgressMessage(message)
+        } catch (_: RemoteException) {
+            // The host is gone, so there is nobody to show the message to.
         }
     }
 

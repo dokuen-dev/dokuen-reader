@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.0]
+
+### Added
+
+- Support for dictionary plugins to show a progress message while a custom action runs, through
+  `CustomActionContext.setProgressMessage(message)`, in place of Dokuen's default progress text.
+- `onProgressMessage` method to `ICustomActionCallback` AIDL.
+- `CustomActionContext.MAX_PROGRESS_MESSAGE_LENGTH`: the length, in UTF-16 code units, that the
+  host cuts progress messages to (100).
+
 ## [0.8.1]
 
 ### Changed

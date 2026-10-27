@@ -10,8 +10,9 @@ import io.github.dokuendev.dokuenreader.dictionary.ImageRequestOptions;
  * Callback interface for custom action execution on dictionary plugins.
  *
  * Besides reporting the action's outcome, the plugin can ask the host for things while the
- * action runs (requestImage, requestClipboardText, requestReadings). Answers to requests have
- * no time limit; an interactive request takes as long as the user needs.
+ * action runs (requestImage, requestClipboardText, requestReadings) and tell the user what it is
+ * doing (onProgressMessage). Answers to requests have no time limit; an interactive request takes
+ * as long as the user needs.
  */
 interface ICustomActionCallback {
     oneway void onSuccessMessage(String message);
@@ -51,4 +52,16 @@ interface ICustomActionCallback {
      * @since 0.8.0
      */
     oneway void requestReadings(String text, IReadingsRequestCallback callback);
+
+    /**
+     * Shows [message] in the host UI while the action runs, in place of the host's default
+     * progress text. Each call replaces the previous message, and null (or an empty or blank
+     * message) restores the default. Valid only while this action has not reported its outcome;
+     * the host ignores it afterwards. The host cuts messages longer than
+     * CustomActionContext.MAX_PROGRESS_MESSAGE_LENGTH (100) UTF-16 code units, and may shorten a
+     * message further when it does not fit in the host UI.
+     *
+     * @since 0.9.0
+     */
+    oneway void onProgressMessage(String message);
 }

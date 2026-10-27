@@ -568,6 +568,8 @@ class DictionaryPluginServiceTest {
             override fun requestReadings(text: String?, callback: IReadingsRequestCallback?) {
                 callback?.onNoReadings()
             }
+
+            override fun onProgressMessage(message: String?) {}
         }
 
         val binder = plugin.getBinder() as IDictionaryService
@@ -614,6 +616,8 @@ class DictionaryPluginServiceTest {
             override fun requestReadings(text: String?, callback: IReadingsRequestCallback?) {
                 callback?.onNoReadings()
             }
+
+            override fun onProgressMessage(message: String?) {}
         }
 
         val binder = plugin.getBinder() as IDictionaryService
@@ -660,6 +664,8 @@ class DictionaryPluginServiceTest {
             override fun requestReadings(text: String?, callback: IReadingsRequestCallback?) {
                 callback?.onNoReadings()
             }
+
+            override fun onProgressMessage(message: String?) {}
         }
 
         val binder = plugin.getBinder() as IDictionaryService

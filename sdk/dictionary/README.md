@@ -1101,6 +1101,39 @@ Other session languages get null.
 Only request what you will use. An interactive request shows UI to the user, and on Android 12
 and later reading the clipboard makes the system show a "pasted from your clipboard" notice.
 
+**Showing Progress During an Action:**
+
+While an action runs, Dokuen shows a generic progress text in the popup. Since SDK 0.9.0, an
+action can say what it is doing instead, with `context.setProgressMessage(message)`. For
+example, an "Add to Anki" action can show "Adding note..." while it works:
+
+```kotlin
+override suspend fun onExecuteCustomAction(
+    actionPayload: String,
+    context: CustomActionContext
+): CustomActionResult {
+    context.setProgressMessage(getString(R.string.adding_note))
+    addNote(actionPayload)
+    return CustomActionResult.SuccessMessage(getString(R.string.note_added))
+}
+```
+
+Call it once, at the start of the action. Actions should finish quickly, so the message only
+needs to say what the action is doing, not how far along it is. It is not meant for reporting
+each stage of a longer action or for updating a percentage as work proceeds.
+
+A later call replaces the previous message, and `null` (or an empty or blank message) restores
+Dokuen's default text. The message is replaced by the action's outcome when the action returns.
+Localize messages like any other message (see `PluginHostConfigKeys.USER_LOCALE`).
+
+Keep messages short. Messages longer than `CustomActionContext.MAX_PROGRESS_MESSAGE_LENGTH` (100)
+UTF-16 code units are cut to that length, and Dokuen may shorten a message further when it does
+not fit on screen.
+
+`setProgressMessage` returns immediately and never fails. It does nothing after the action has
+ended, or when Dokuen is older than SDK 0.9.0, in which case Dokuen keeps showing its default
+text.
+
 `CustomActionContext` is an interface, so unit tests can call the two-argument
 `onExecuteCustomAction` with a fake that returns the answers you want to test.
 

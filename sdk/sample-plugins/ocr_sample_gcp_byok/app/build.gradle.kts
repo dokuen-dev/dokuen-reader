@@ -42,7 +42,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
 
     // Plugin SDK
-    implementation("io.github.dokuendev.dokuenreader:ocr:0.8.1")
+    implementation("io.github.dokuendev.dokuenreader:ocr:0.9.0")
 
     // Unit testing
     testImplementation(libs.junit)

@@ -134,14 +134,13 @@ abstract class DictionaryPluginService : BasePluginService() {
 
     private val serviceScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-    // Whether the host answers requests made during a custom action, from the host SDK version
-    // passed to initialize().
+    // The host SDK version passed to initialize(), which decides what the host supports. Null
+    // before initialize() and for hosts older than 0.7.0, which do not send it.
     @Volatile
-    private var hostSupportsActionRequests = false
+    private var hostSdkVersion: SdkVersion? = null
 
-    // Whether the host answers readings requests, also decided by the host SDK version.
-    @Volatile
-    private var hostSupportsReadingsRequests = false
+    /** Whether this host SDK version is known and at least [minimum]. */
+    private fun SdkVersion?.isAtLeast(minimum: SdkVersion): Boolean = this != null && this >= minimum
 
     private companion object {
         /** The first host SDK version that answers requests made during a custom action. */
@@ -149,6 +148,9 @@ abstract class DictionaryPluginService : BasePluginService() {
 
         /** The first host SDK version that answers readings requests. */
         private val MIN_HOST_SDK_VERSION_FOR_READINGS_REQUESTS = SdkVersion(0, 8, 0)
+
+        /** The first host SDK version that shows progress messages. */
+        private val MIN_HOST_SDK_VERSION_FOR_PROGRESS_MESSAGES = SdkVersion(0, 9, 0)
     }
 
     /**
@@ -391,7 +393,7 @@ abstract class DictionaryPluginService : BasePluginService() {
 
     /**
      * Execute a custom action requested by the host application, with a [context] for asking
-     * the host for things (such as an image) while the action runs.
+     * the host for things (such as an image) and showing progress messages while the action runs.
      *
      * Override this instead of the one-argument version to use [context]. The default calls the
      * one-argument version, so plugins written against older SDKs keep working unchanged.
@@ -426,9 +428,7 @@ abstract class DictionaryPluginService : BasePluginService() {
                 callback?.onFailure("Calling app is not authorized")
                 return
             }
-            val hostVersion = SdkVersion.parse(config?.getString(PluginHostConfigKeys.HOST_SDK_VERSION))
-            hostSupportsActionRequests = hostVersion?.let { it >= MIN_HOST_SDK_VERSION_FOR_ACTION_REQUESTS } == true
-            hostSupportsReadingsRequests = hostVersion?.let { it >= MIN_HOST_SDK_VERSION_FOR_READINGS_REQUESTS } == true
+            hostSdkVersion = SdkVersion.parse(config?.getString(PluginHostConfigKeys.HOST_SDK_VERSION))
             serviceScope.launch {
                 try {
                     val result = onInitialize(config)
@@ -492,7 +492,13 @@ abstract class DictionaryPluginService : BasePluginService() {
 
             serviceScope.launch {
                 try {
-                    val context = HostActionContext(callback, hostSupportsActionRequests, hostSupportsReadingsRequests)
+                    val hostVersion = hostSdkVersion
+                    val context = HostActionContext(
+                        callback,
+                        hostSupportsRequests = hostVersion.isAtLeast(MIN_HOST_SDK_VERSION_FOR_ACTION_REQUESTS),
+                        hostSupportsReadings = hostVersion.isAtLeast(MIN_HOST_SDK_VERSION_FOR_READINGS_REQUESTS),
+                        hostSupportsProgressMessages = hostVersion.isAtLeast(MIN_HOST_SDK_VERSION_FOR_PROGRESS_MESSAGES)
+                    )
                     val result = try {
                         onExecuteCustomAction(actionPayload, context)
                     } finally {
@@ -502,7 +508,7 @@ abstract class DictionaryPluginService : BasePluginService() {
                         is CustomActionResult.SuccessMessage -> callback.onSuccessMessage(result.message)
                         is CustomActionResult.UpdateResult -> when {
                             // onUpdateResultWithMessage was added in the same SDK version as action requests.
-                            hostSupportsActionRequests && result.message != null ->
+                            hostVersion.isAtLeast(MIN_HOST_SDK_VERSION_FOR_ACTION_REQUESTS) && result.message != null ->
                                 callback.onUpdateResultWithMessage(result.result, result.message)
 
                             else -> callback.onUpdateResult(result.result)

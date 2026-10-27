@@ -72,6 +72,22 @@ class ActionContextWiringTest {
         public override fun getBinder(): IBinder = super.getBinder()
     }
 
+    /** Shows a progress message and then succeeds. */
+    class ProgressPlugin : DictionaryPluginService() {
+        override suspend fun onLookup(contextText: String, cursorStartIndex: Int, cursorEndIndex: Int) =
+            DictionaryResult(emptyArray())
+
+        override suspend fun onExecuteCustomAction(
+            actionPayload: String,
+            context: CustomActionContext
+        ): CustomActionResult {
+            context.setProgressMessage("Working on $actionPayload")
+            return CustomActionResult.SuccessMessage("done")
+        }
+
+        public override fun getBinder(): IBinder = super.getBinder()
+    }
+
     private class RecordingHost : ICustomActionCallback.Stub() {
         val latch = CountDownLatch(1)
         var outcome: String? = null
@@ -116,6 +132,12 @@ class ActionContextWiringTest {
         override fun requestReadings(text: String?, callback: IReadingsRequestCallback?) {
             readingsRequests++
             callback!!.onReadings(arrayOf(wordReading(0, 2)))
+        }
+
+        val progressMessages = mutableListOf<String?>()
+
+        override fun onProgressMessage(message: String?) {
+            progressMessages += message
         }
     }
 
@@ -186,6 +208,20 @@ class ActionContextWiringTest {
         val host = run(Robolectric.buildService(ReadingsPlugin::class.java).create().get(), "0.7.0")
         assertEquals(0, host.readingsRequests)
         assertEquals("null", host.message)
+    }
+
+    @Test
+    fun hostWithProgressMessagesReceivesThem() {
+        val host = run(Robolectric.buildService(ProgressPlugin::class.java).create().get(), "0.9.0")
+        assertEquals(listOf("Working on payload"), host.progressMessages)
+        assertEquals("done", host.message)
+    }
+
+    @Test
+    fun hostWithoutProgressMessagesIsNotSentThem() {
+        val host = run(Robolectric.buildService(ProgressPlugin::class.java).create().get(), "0.8.0")
+        assertEquals(emptyList<String?>(), host.progressMessages)
+        assertEquals("done", host.message)
     }
 
     @Test
