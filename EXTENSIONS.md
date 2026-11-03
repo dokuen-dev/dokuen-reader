@@ -159,9 +159,9 @@ execution budget (see Limits, below).
 - **No filesystem or device APIs.** The only capabilities available are the `entries` variable
   and the `httpPost` function. No reading files, no other app data, no access to sensors,
   contacts, etc.
-- **Plain JavaScript only.** There's no DOM, no `fetch`, no Node.js modules, no `require`/`import`
-  - just the language itself (variables, functions, `JSON`, template literals, `encodeURIComponent`,
-  and so on).
+- **Plain JavaScript only.** There's no DOM, no `fetch`, no Node.js modules, no
+  `require`/`import` - just the language itself (variables, functions, `JSON`, template literals,
+  `encodeURIComponent`, and so on).
 
 ## Full examples
 

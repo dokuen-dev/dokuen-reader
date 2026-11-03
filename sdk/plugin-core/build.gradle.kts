@@ -66,12 +66,15 @@ androidComponents {
         val generateSdkVersion = tasks.register<GenerateSdkVersionTask>(
             "generate${variant.name.replaceFirstChar { it.uppercase() }}SdkVersion"
         ) {
+            description = "Writes the SDK version for the ${variant.name} variant into a generated Kotlin source file."
             versionName.set(sdkVersion)
         }
         variant.sources.kotlin?.addGeneratedSourceDirectory(generateSdkVersion, GenerateSdkVersionTask::outputDir)
 
         val copyAidlTask =
             tasks.register("copy${variant.name.replaceFirstChar { it.uppercase() }}AidlFiles", Copy::class.java) {
+                description = "Copies the AIDL files into the ${variant.name} variant's intermediates, " +
+                        "where dependent modules expect them."
                 from("src/main/aidl")
                 into("build/intermediates/aidl_parcelable/${variant.name}/compile${variant.name.replaceFirstChar { it.uppercase() }}Aidl/out")
             }

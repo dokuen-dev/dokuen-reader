@@ -37,6 +37,8 @@ For documentation on installing plugins or building your own, see the [Plugins G
 
 To explore or customize quick actions, see [Dictionary Extensions](EXTENSIONS.md).
 
+To play pronunciation audio from a website or service you choose, see [Custom Audio Sources](AUDIO_SOURCES.md).
+
 ## FAQ
 
 **Q: Why do I see a "recording" icon and timer in my status bar?**
