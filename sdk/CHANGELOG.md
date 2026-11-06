@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.0]
+
+### Added
+
+- `PitchAccentSpan`, which describes the pitch accent of a run of kana and directs the host
+  to draw a pitch accent diagram, and an optional `pitchAccentSpans` field on `StyledText`.
+- The `PitchAccentSpan(...)` factory and the `pitchAccentSpans` parameter of `StyledText(...)`.
+- Pitch accent spans count toward `MAX_SPANS_PER_ENTRY`.
+
 ## [0.9.0]
 
 ### Added

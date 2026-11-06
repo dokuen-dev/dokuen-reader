@@ -42,17 +42,20 @@ fun DictionaryEntry(
  * @param blockSpans Optional block-level layout containers applied to character ranges
  * @param styledSpans Optional inline style annotations applied to character ranges
  * @param rubySpans Optional ruby text annotations for character ranges
+ * @param pitchAccentSpans Optional pitch accent annotations for character ranges (since 0.10.0)
  */
 fun StyledText(
     text: String,
     blockSpans: Array<BlockSpan>? = null,
     styledSpans: Array<StyledSpan>? = null,
-    rubySpans: Array<RubySpan>? = null
+    rubySpans: Array<RubySpan>? = null,
+    pitchAccentSpans: Array<PitchAccentSpan>? = null
 ): StyledText = StyledText().apply {
     this.text = text
     this.blockSpans = blockSpans
     this.styledSpans = styledSpans
     this.rubySpans = rubySpans
+    this.pitchAccentSpans = pitchAccentSpans
 }
 
 /**
@@ -81,6 +84,38 @@ fun RubySpan(
     this.startIndex = startIndex
     this.endIndex = endIndex
     this.rubyText = rubyText
+}
+
+/**
+ * Creates a PitchAccentSpan with the specified properties.
+ *
+ * Says what the pitch accent of a run of kana is, and nothing about how to show it. The text in
+ * the range must be complete and readable by itself, and two PitchAccentSpans must not overlap.
+ *
+ * @param startIndex Start index in the text (inclusive)
+ * @param endIndex End index in the text (exclusive)
+ * @param moraLengths The length of each mora in UTF-16 code units, in order. They add up to
+ *   `endIndex - startIndex`.
+ * @param pitchPattern One `H` or `L` per mora, followed by one more for the pitch of whatever
+ *   follows the word. Its length is `moraLengths.size + 1`.
+ * @param nasalMorae The 0-based indices of the nasal morae, or null for none
+ * @param devoicedMorae The 0-based indices of the devoiced morae, or null for none
+ * @since 0.10.0
+ */
+fun PitchAccentSpan(
+    startIndex: Int,
+    endIndex: Int,
+    moraLengths: IntArray,
+    pitchPattern: String,
+    nasalMorae: IntArray? = null,
+    devoicedMorae: IntArray? = null
+): PitchAccentSpan = PitchAccentSpan().apply {
+    this.startIndex = startIndex
+    this.endIndex = endIndex
+    this.moraLengths = moraLengths
+    this.pitchPattern = pitchPattern
+    this.nasalMorae = nasalMorae
+    this.devoicedMorae = devoicedMorae
 }
 
 /**

@@ -46,12 +46,15 @@ object PluginSecurityLimits {
     const val MAX_BODY_LENGTH = 50_000
 
     /**
-     * Maximum number of spans (StyledSpan + RubySpan) per dictionary entry.
+     * Maximum number of spans per dictionary entry.
      *
      * This limit applies to the combined total of:
+     * - RubySpan objects in the pronunciation
+     * - HeadwordSpan objects in the headword
+     * - BlockSpan objects in the body
      * - StyledSpan objects in the body
      * - RubySpan objects in the body
-     * - RubySpan objects in the pronunciation
+     * - PitchAccentSpan objects in the body
      */
     const val MAX_SPANS_PER_ENTRY = 500
 

@@ -2,6 +2,7 @@ package io.github.dokuendev.dokuenreader.dictionary
 
 import android.graphics.Color
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -98,6 +99,54 @@ class DictionaryExtensionsTest {
         assertEquals(1, entry.headwordSpans!!.size)
         assertEquals("lookup:test", entry.headwordSpans!![0].linkUrl)
         assertEquals(bodyText, entry.body)
+    }
+
+    @Test
+    fun pitchAccentSpan_factoryConstructor_setsSpecifiedValues() {
+        val span = PitchAccentSpan(
+            startIndex = 1,
+            endIndex = 6,
+            moraLengths = intArrayOf(1, 1, 2, 1),
+            pitchPattern = "LHHLL",
+            nasalMorae = intArrayOf(2),
+            devoicedMorae = intArrayOf(0)
+        )
+
+        assertEquals(1, span.startIndex)
+        assertEquals(6, span.endIndex)
+        assertArrayEquals(intArrayOf(1, 1, 2, 1), span.moraLengths)
+        assertEquals("LHHLL", span.pitchPattern)
+        assertArrayEquals(intArrayOf(2), span.nasalMorae)
+        assertArrayEquals(intArrayOf(0), span.devoicedMorae)
+    }
+
+    @Test
+    fun pitchAccentSpan_factoryConstructor_defaultsOptionalArraysToNull() {
+        val span = PitchAccentSpan(0, 3, intArrayOf(1, 1, 1), "LHLL")
+
+        assertEquals(0, span.startIndex)
+        assertEquals(3, span.endIndex)
+        assertArrayEquals(intArrayOf(1, 1, 1), span.moraLengths)
+        assertEquals("LHLL", span.pitchPattern)
+        assertNull(span.nasalMorae)
+        assertNull(span.devoicedMorae)
+    }
+
+    @Test
+    fun styledText_factoryConstructor_leavesPitchAccentSpansNullByDefault() {
+        val styledText = StyledText("Hello")
+
+        assertNull(styledText.pitchAccentSpans)
+    }
+
+    @Test
+    fun styledText_factoryConstructor_setsPitchAccentSpans() {
+        val spans = arrayOf(PitchAccentSpan(0, 2, intArrayOf(1, 1), "LHH"))
+        val styledText = StyledText(text = "はし", pitchAccentSpans = spans)
+
+        assertNotNull(styledText.pitchAccentSpans)
+        assertEquals(1, styledText.pitchAccentSpans.size)
+        assertEquals("LHH", styledText.pitchAccentSpans[0].pitchPattern)
     }
 
     @Test

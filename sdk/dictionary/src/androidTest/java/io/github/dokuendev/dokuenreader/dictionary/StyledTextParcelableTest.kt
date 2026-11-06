@@ -3,6 +3,7 @@ package io.github.dokuendev.dokuenreader.dictionary
 import android.graphics.Color
 import android.os.Parcel
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -375,6 +376,154 @@ class StyledTextParcelableTest {
             assertEquals(100, unparceled.text.length)
             assertNotNull(unparceled.styledSpans)
             assertEquals(50, unparceled.styledSpans!!.size)
+        } finally {
+            parcel.recycle()
+        }
+    }
+
+    @Test
+    fun styledText_withPitchAccentSpans_canBeParceled() {
+        val original = StyledText().apply {
+            text = "ばんこ゚う"
+            pitchAccentSpans = arrayOf(
+                PitchAccentSpan().apply {
+                    startIndex = 0
+                    endIndex = 5
+                    moraLengths = intArrayOf(1, 1, 2, 1)
+                    pitchPattern = "LHHLL"
+                    nasalMorae = intArrayOf(2)
+                    devoicedMorae = null
+                }
+            )
+        }
+
+        val parcel = Parcel.obtain()
+        try {
+            original.writeToParcel(parcel, 0)
+            parcel.setDataPosition(0)
+
+            val unparceled = StyledText.CREATOR.createFromParcel(parcel)
+
+            assertEquals("ばんこ゚う", unparceled.text)
+            assertNotNull(unparceled.pitchAccentSpans)
+            assertEquals(1, unparceled.pitchAccentSpans!!.size)
+            val span = unparceled.pitchAccentSpans!![0]
+            assertEquals(0, span.startIndex)
+            assertEquals(5, span.endIndex)
+            assertArrayEquals(intArrayOf(1, 1, 2, 1), span.moraLengths)
+            assertEquals("LHHLL", span.pitchPattern)
+            assertArrayEquals(intArrayOf(2), span.nasalMorae)
+            assertNull(span.devoicedMorae)
+        } finally {
+            parcel.recycle()
+        }
+    }
+
+    @Test
+    fun styledText_withoutPitchAccentSpans_readsNull() {
+        val original = StyledText().apply {
+            text = "No pitch accent"
+        }
+
+        val parcel = Parcel.obtain()
+        try {
+            original.writeToParcel(parcel, 0)
+            parcel.setDataPosition(0)
+
+            val unparceled = StyledText.CREATOR.createFromParcel(parcel)
+
+            assertEquals("No pitch accent", unparceled.text)
+            assertNull(unparceled.pitchAccentSpans)
+        } finally {
+            parcel.recycle()
+        }
+    }
+
+    @Test
+    fun styledText_withPitchAccentSpans_olderReaderSkipsTheNewField() {
+        val original = StyledText().apply {
+            text = "漢字、はし"
+            rubySpans = arrayOf(
+                RubySpan().apply {
+                    startIndex = 0
+                    endIndex = 2
+                    rubyText = "かんじ"
+                }
+            )
+            pitchAccentSpans = arrayOf(
+                PitchAccentSpan().apply {
+                    startIndex = 3
+                    endIndex = 5
+                    moraLengths = intArrayOf(1, 1)
+                    pitchPattern = "LHH"
+                }
+            )
+        }
+
+        val parcel = Parcel.obtain()
+        try {
+            original.writeToParcel(parcel, 0)
+            parcel.writeInt(0x5EED)
+            parcel.setDataPosition(0)
+
+            // Reads the way a StyledText from before pitchAccentSpans does. It knows the size
+            // header and the first four fields, and it ends at start + size whatever it read.
+            val start = parcel.dataPosition()
+            val size = parcel.readInt()
+            val end = start + size
+            val text = parcel.readString()
+            val blockSpans = parcel.createTypedArray(BlockSpan.CREATOR)
+            val styledSpans = parcel.createTypedArray(StyledSpan.CREATOR)
+            val rubySpans = parcel.createTypedArray(RubySpan.CREATOR)
+            parcel.setDataPosition(end)
+
+            assertEquals("漢字、はし", text)
+            assertNull(blockSpans)
+            assertNull(styledSpans)
+            assertNotNull(rubySpans)
+            assertEquals(1, rubySpans!!.size)
+            assertEquals("かんじ", rubySpans[0].rubyText)
+            assertEquals(0x5EED, parcel.readInt())
+        } finally {
+            parcel.recycle()
+        }
+    }
+
+    @Test
+    fun styledText_fromOlderWriter_readsPitchAccentSpansAsNull() {
+        val rubySpan = RubySpan().apply {
+            startIndex = 0
+            endIndex = 2
+            rubyText = "かんじ"
+        }
+
+        val parcel = Parcel.obtain()
+        try {
+            // Writes the way a StyledText from before pitchAccentSpans does: a size header
+            // and the first four fields, with the size filled in once they are written.
+            val start = parcel.dataPosition()
+            parcel.writeInt(0)
+            parcel.writeString("漢字")
+            parcel.writeTypedArray<BlockSpan>(null, 0)
+            parcel.writeTypedArray<StyledSpan>(null, 0)
+            parcel.writeTypedArray(arrayOf(rubySpan), 0)
+            val end = parcel.dataPosition()
+            parcel.setDataPosition(start)
+            parcel.writeInt(end - start)
+            parcel.setDataPosition(end)
+            parcel.writeInt(0x5EED)
+            parcel.setDataPosition(0)
+
+            val unparceled = StyledText.CREATOR.createFromParcel(parcel)
+
+            assertEquals("漢字", unparceled.text)
+            assertNull(unparceled.blockSpans)
+            assertNull(unparceled.styledSpans)
+            assertNotNull(unparceled.rubySpans)
+            assertEquals(1, unparceled.rubySpans!!.size)
+            assertEquals("かんじ", unparceled.rubySpans!![0].rubyText)
+            assertNull(unparceled.pitchAccentSpans)
+            assertEquals(0x5EED, parcel.readInt())
         } finally {
             parcel.recycle()
         }

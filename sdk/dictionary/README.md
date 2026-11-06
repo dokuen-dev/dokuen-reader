@@ -698,14 +698,15 @@ A text string paired with optional formatting spans and ruby annotations. Think 
 as an IPC-safe equivalent of Compose `AnnotatedString`.
 
 StyledText uses a **"Separated Span" architecture** where the flat text string is the
-single source of truth, and three independent span arrays define structure and styling:
+single source of truth, and four independent span arrays define structure and styling:
 
-| Field         | Type            | Description                                      |
-|---------------|-----------------|--------------------------------------------------|
-| `text`        | `String`        | The plain text content.                          |
-| `blockSpans`  | `BlockSpan[]?`  | Layout containers (lists, boxes, tables).        |
-| `styledSpans` | `StyledSpan[]?` | Inline text formatting (bold, italic, colors).   |
-| `rubySpans`   | `RubySpan[]?`   | Ruby text annotations (pronunciation, furigana). |
+| Field              | Type                 | Description                                      |
+|--------------------|----------------------|--------------------------------------------------|
+| `text`             | `String`             | The plain text content.                          |
+| `blockSpans`       | `BlockSpan[]?`       | Layout containers (lists, boxes, tables).        |
+| `styledSpans`      | `StyledSpan[]?`      | Inline text formatting (bold, italic, colors).   |
+| `rubySpans`        | `RubySpan[]?`        | Ruby text annotations (pronunciation, furigana). |
+| `pitchAccentSpans` | `PitchAccentSpan[]?` | Pitch accent of runs of kana.                    |
 
 **Architecture:**
 
@@ -713,6 +714,7 @@ single source of truth, and three independent span arrays define structure and s
   start/end)
 - **StyledSpan**: Applies inline text formatting within those structures
 - **RubySpan**: Adds pronunciation annotations
+- **PitchAccentSpan**: Describes the pitch accent of a run of kana
 
 **Example:**
 
@@ -1252,6 +1254,79 @@ val rubySpans = listOf(
 Ruby text is rendered above (or beside, for vertical layouts) the annotated base text
 in the Dokuen UI.
 
+#### `PitchAccentSpan`
+
+Describes the pitch accent of a run of kana in a `StyledText`. A `PitchAccentSpan` says what the
+pitch is and nothing about how to show it. A host may draw the pitch however it likes, or
+ignore the span. Hosts older than SDK 0.10.0 ignore the `pitchAccentSpans` field.
+
+Dokuen draws each span inline, in the body text, as the span's kana at the furigana size with a
+dot graph above them: one dot per mora, high or low, joined by lines, with a hollow dot before each
+drop and a hollow triangle after the last mora for the pitch of whatever follows the word. A
+devoiced mora is circled with a dotted line. Dokuen has one fixed drawing and no setting for it,
+and it does not write a downstep number such as `[3]`. A plugin that wants one writes it as
+ordinary text in the body. Dokuen shows a span as plain text instead when it overlaps a
+`RubySpan`, or when it crosses a block boundary, a newline, or a table cell. In a table cell, the
+same happens when the span overlaps a `<br>` tag or begins or ends with whitespace at the edge of
+the cell.
+
+| Field           | Type        | Description                                                                                                                                                                                                                  |
+|-----------------|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `startIndex`    | `Int`       | Inclusive start of the kana in `StyledText.text`.                                                                                                                                                                            |
+| `endIndex`      | `Int`       | Exclusive end of the kana in `StyledText.text`.                                                                                                                                                                              |
+| `moraLengths`   | `IntArray`  | The length of each mora in UTF-16 code units, in order. They add up to `endIndex - startIndex`. They are relative to the span rather than to the text, so moving a span only changes its two indices.                       |
+| `pitchPattern`  | `String`    | One character per mora, `H` for high and `L` for low, followed by one more character for the pitch of whatever follows the word (such as a particle). Its length is `moraLengths.size + 1`, and it contains only `H` and `L`. |
+| `nasalMorae`    | `IntArray?` | The 0-based indices of the nasal morae (bidakuon), or null for none.                                                                                                                                                         |
+| `devoicedMorae` | `IntArray?` | The 0-based indices of the devoiced morae, or null for none.                                                                                                                                                                 |
+
+**Rules:**
+
+- The text in the range is complete and readable by itself. It must stay correct when the host
+  ignores the span.
+- A span describes pitch only. Other spans, such as a `StyledSpan`, may overlap it.
+- Two `PitchAccentSpan`s must not overlap. If they do, the behavior is undefined.
+- `pitchPattern` is always `moraLengths.size + 1` characters long and contains only `H` and
+  `L`, whatever form your dictionary's data took.
+- Dokuen ignores the whole span, not only the part that is wrong, when any of these is true:
+  - `startIndex < 0`, `endIndex > text.length`, or `startIndex >= endIndex`.
+  - `moraLengths` is null or empty, contains a length of 0 or less, or does not add up to
+    `endIndex - startIndex`.
+  - `pitchPattern` is null, is not `moraLengths.size + 1` characters long, or contains a
+    character other than uppercase `H` and `L`.
+  - `nasalMorae` or `devoicedMorae` contains an index that is negative or not less than
+    `moraLengths.size`.
+
+**Examples:**
+
+```kotlin
+// いたい (downstep after mora 2)
+PitchAccentSpan(0, 3, moraLengths = intArrayOf(1, 1, 1), pitchPattern = "LHLL")
+
+// はし (no downstep)
+PitchAccentSpan(0, 2, moraLengths = intArrayOf(1, 1), pitchPattern = "LHH")
+
+// きょう (downstep after mora 1; きょ is one mora of two code units)
+PitchAccentSpan(0, 3, moraLengths = intArrayOf(2, 1), pitchPattern = "HLL")
+
+// ばんこ゚う (downstep after mora 3, third mora nasal). The nasal kana is the base kana plus a
+// combining handakuten (U+309A), which is how it appears in print. The two code units are one
+// mora.
+PitchAccentSpan(
+    0, 5,
+    moraLengths = intArrayOf(1, 1, 2, 1),
+    pitchPattern = "LHHLL",
+    nasalMorae = intArrayOf(2)
+)
+
+// どぼくこうじ (downstep after mora 4, third mora devoiced)
+PitchAccentSpan(
+    0, 6,
+    moraLengths = intArrayOf(1, 1, 1, 1, 1, 1),
+    pitchPattern = "LHHHLLL",
+    devoicedMorae = intArrayOf(2)
+)
+```
+
 #### `DictionaryResult`
 
 The complete result of a dictionary lookup, wrapping a list of `DictionaryEntry` objects.
@@ -1294,11 +1369,11 @@ Use `DictionaryErrorCode` constants when throwing `DictionaryException`:
 The host enforces these limits on every `DictionaryResult`. Responses that exceed a
 limit are silently truncated rather than rejected, so your plugin continues working:
 
-| Limit                    | Value  | Applies to                                           |
-|--------------------------|--------|------------------------------------------------------|
-| `MAX_DICTIONARY_ENTRIES` | 100    | Number of `DictionaryEntry` objects per result       |
-| `MAX_BODY_LENGTH`        | 50,000 | Characters in a single `StyledText.text`             |
-| `MAX_SPANS_PER_ENTRY`    | 500    | Combined `StyledSpan` + `RubySpan` objects per entry |
+| Limit                    | Value  | Applies to                                                                                                                             |
+|--------------------------|--------|----------------------------------------------------------------------------------------------------------------------------------------|
+| `MAX_DICTIONARY_ENTRIES` | 100    | Number of `DictionaryEntry` objects per result                                                                                         |
+| `MAX_BODY_LENGTH`        | 50,000 | Characters in a single `StyledText.text`                                                                                               |
+| `MAX_SPANS_PER_ENTRY`    | 500    | Combined pronunciation `RubySpan`, `HeadwordSpan`, `BlockSpan`, `StyledSpan`, body `RubySpan`, and `PitchAccentSpan` objects per entry |
 
 **Timeout:** Complete lookups within **30 seconds**. The host enforces a timeout and
 will ignore results that arrive late. If your plugin needs network access, handle
